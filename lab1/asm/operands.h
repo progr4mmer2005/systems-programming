@@ -21,18 +21,6 @@ string expectedOperands(int format) {
 // Метка в операнде: имя, которое не регистр.
 bool isLabel(string s) { return isName(s) && !isRegister(s); }
 
-// Метка в квадратных скобках [One] - относительная адресация.
-bool isRelativeLabel(string s) {
-    if (len(s) < 3 || s[0] != '[' || s[len(s) - 1] != ']') return false;
-    return isLabel(s.substr(1, len(s) - 2));
-}
-
-// "[One]" -> "One", "One" -> "One"
-string withoutBrackets(string s) {
-    if (isRelativeLabel(s)) return s.substr(1, len(s) - 2);
-    return s;
-}
-
 // Число 0..255 для формата 2.
 Number parseSmallNumber(string s) {
     Number n = parseDecimal(s);
@@ -44,13 +32,11 @@ Number parseSmallNumber(string s) {
 //   "none", "registers", "number", "label", "register+label".
 // "" - операнды не подходят формату.
 string operandKind(int format, string a, string b) {
-    bool aIsLabel = isLabel(a) || isRelativeLabel(a);
-    bool bIsLabel = isLabel(b) || isRelativeLabel(b);
     if (format == 1 && a == "" && b == "") return "none";
     if (format == 2 && isRegister(a) && isRegister(b)) return "registers";
     if (format == 2 && parseSmallNumber(a).ok && b == "") return "number";
-    if (format == 3 && aIsLabel && b == "") return "label";
-    if (format == 4 && isRegister(a) && bIsLabel) return "register+label";
+    if (format == 3 && isLabel(a) && b == "") return "label";
+    if (format == 4 && isRegister(a) && isLabel(b)) return "register+label";
     return "";
 }
 

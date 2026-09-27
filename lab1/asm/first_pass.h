@@ -85,17 +85,10 @@ string parseCommand(Line& line, OpCode op) {
         return op.name + " (формат " + to_string(op.length) + "): ожидается " + expectedOperands(op.length) +
                ", а записано «" + joinOperands(line.op1, line.op2) + "»";
 
-    // Есть ли в операндах метка и какая адресация.
-    string labelOperand = "";
-    if (kind == "label") labelOperand = line.op1;
-    if (kind == "register+label") labelOperand = line.op2;
-    int addressing = ADDRESSING_NONE;
-    if (labelOperand != "") {
-        addressing = isRelativeLabel(labelOperand) ? ADDRESSING_RELATIVE : ADDRESSING_DIRECT;
-        line.label = withoutBrackets(labelOperand);
-    }
-    if (addressing == ADDRESSING_RELATIVE && !ALLOW_RELATIVE)
-        return op.name + " " + joinOperands(line.op1, line.op2) + ": [метка] — относительная адресация, она появится в лабе 2";
+    // Есть ли в операндах метка. С меткой адресация прямая, без метки - без адреса.
+    if (kind == "label") line.label = line.op1;
+    if (kind == "register+label") line.label = line.op2;
+    int addressing = line.label != "" ? ADDRESSING_DIRECT : ADDRESSING_NONE;
 
     // Собираем код: первый байт, потом операнды.
     line.firstByte = makeFirstByte(op.code, addressing);

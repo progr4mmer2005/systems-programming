@@ -83,7 +83,6 @@ vector<Example> allExamples() {
         {"Ошибка: неверный адрес загрузки", withRow(good, 0, {"Exampl", "Start", "10G0", ""}), defaultOps(), 1},
         {"Ошибка: нет директивы End", noEnd, defaultOps(), 1},
         {"Ошибка: неверное значение BYTE", withRow(good, 12, {"Text", "BYTE", "300", ""}), defaultOps(), 1},
-        {"Ошибка: относительная адресация [метка] — с лабы 2", withRow(good, 4, {"", "SAV", "R1", "[Rez]"}), defaultOps(), 1},
         {"Ошибка в ТКО: код занят дважды", good, badOps, 1},
         {"Несколько ошибок сразу (1-й проход)", manyErrors, defaultOps(), 1},
         {"Ошибка 2-го прохода: неопределённая метка", withRow(good, 4, {"", "SAV", "R1", "Res"}), defaultOps(), 2},

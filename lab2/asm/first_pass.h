@@ -95,8 +95,6 @@ string parseCommand(Line& line, OpCode op) {
         line.label = withoutBrackets(labelOperand);
     }
     line.addressing = addressing;
-    if (addressing == ADDRESSING_RELATIVE && !ALLOW_RELATIVE)
-        return op.name + " " + joinOperands(line.op1, line.op2) + ": [метка] — относительная адресация, она появится в лабе 2";
 
     // Собираем код: первый байт, потом операнды.
     line.firstByte = makeFirstByte(op.code, addressing);
