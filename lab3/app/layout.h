@@ -98,18 +98,18 @@ void layout() {
     // Правая карточка: заголовок; таблица настройки рядом с внешними именами
     // и ссылками; двоичный код и ошибки; внизу кнопка "Сохранить...".
     area = inside(right);
-    int saveHeight = S(34), gapY = S(12);
-    RECT headerArea = {area.left, area.top, area.right, area.top + S(28) + S(58)};
+    int gapY = S(12), saveWidth = S(150);
+    RECT headerArea = {area.left, area.top, area.right - saveWidth - S(12), area.top + S(28) + S(58)};
     stackGrids(headerArea, {{&headerGrid, "Заголовок объектного модуля", "", 0, S(58)}});
-    int rest = area.bottom - saveHeight - gapY - (headerArea.bottom + gapY);
-    RECT tablesArea = {area.left, headerArea.bottom + gapY, area.right, headerArea.bottom + gapY + rest * 40 / 100};
+    MoveWindow(saveButton, area.right - saveWidth, headerArea.bottom - S(46), saveWidth, S(40), TRUE);
+    int rest = area.bottom - (headerArea.bottom + gapY);
+    RECT tablesArea = {area.left, headerArea.bottom + gapY, area.right, headerArea.bottom + gapY + rest * 38 / 100};
     int half = (area.left + area.right) / 2;
     stackGrids({tablesArea.left, tablesArea.top, half - S(6), tablesArea.bottom}, {{&relocGrid, "Таблица настройки", "", 1, 0}});
     stackGrids({half + S(6), tablesArea.top, tablesArea.right, tablesArea.bottom},
                {{&extNamesGrid, "Внешние имена", "", 55, 0}, {&extRefsGrid, "Внешние ссылки", "", 45, 0}});
-    stackGrids({area.left, tablesArea.bottom + gapY, area.right, area.bottom - saveHeight - gapY},
-               {{&codeGrid, "Двоичный код", "результат 2-го прохода", 65, 0}, {&errors2Grid, "Ошибки второго прохода", "", 35, 0}});
-    MoveWindow(saveButton, area.right - S(170), area.bottom - saveHeight, S(170), saveHeight, TRUE);
+    stackGrids({area.left, tablesArea.bottom + gapY, area.right, area.bottom},
+               {{&codeGrid, "Двоичный код", "результат 2-го прохода", 74, 0}, {&errors2Grid, "Ошибки второго прохода", "", 26, 0}});
 
     // Нижняя полоса: кнопки, строка состояния, список примеров.
     int buttonY = height - bottomHeight + S(16), buttonHeight = S(38), buttonWidth = S(190);

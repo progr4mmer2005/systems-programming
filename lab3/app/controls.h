@@ -26,7 +26,8 @@ void createGrids() {
 
     // Средняя карточка - первый проход.
     supportGrid.headers = {"Адрес", "Фмт", "КОП | адр.", "Код", "Метка"};
-    supportGrid.widths = {15, 11, 24, 30, 20};
+    supportGrid.widths = {12, 10, 19, 32, 27};
+    supportGrid.showTooltips = true;
     supportGrid.placeholder = "Появится после первого прохода";
     supportGrid.create(mainWindow, ID_SUPPORT, fonts.mono);
 
@@ -42,7 +43,7 @@ void createGrids() {
 
     // Правая карточка - второй проход.
     headerGrid.headers = {"Имя программы", "Длина", "Адрес загрузки"};
-    headerGrid.widths = {34, 33, 33};
+    headerGrid.widths = {38, 22, 40};
     headerGrid.placeholder = "Появится после второго прохода";
     headerGrid.create(mainWindow, ID_HEADER, fonts.mono);
 

@@ -36,7 +36,7 @@ int registerNumber(string s) {
 bool isRegister(string s) { return registerNumber(s) != -1; }
 
 // Директивы - указания ассемблеру, а не команды процессора.
-// EXTNAME - то же, что EXTDEF (так она называется в Zasm из методички).
+// EXTNAME - то же, что EXTDEF.
 bool isDirective(string s) {
     s = upper(s);
     return s == "START" || s == "END" || s == "WORD" || s == "BYTE" || s == "EXTDEF" || s == "EXTNAME" || s == "EXTREF";

@@ -30,7 +30,7 @@ Table defaultOps() {
     };
 }
 
-// Программа из методички (Zasm 3.0): модуль отдаёт другим метки buf и Str1,
+// Программа без ошибок: модуль отдаёт другим метки buf и Str1,
 // а метку Str2 берёт из другого модуля. str3 и str2 в операндах написаны
 // маленькими буквами - имена сравниваются без учёта регистра.
 Table referenceSource() {
@@ -92,7 +92,7 @@ vector<Example> allExamples() {
     manyUndefined = withRow(manyUndefined, 4, {"", "LD", "R2", "[str2]"});
 
     return {
-        {"По умолчанию (пример из методички)", good, defaultOps(), 0},
+        {"Без ошибок", good, defaultOps(), 0},
         {"Две внешние ссылки", twoRefsSource(), defaultOps(), 0},
         {"Ошибка: имя и в EXTDEF, и в EXTREF", withRow(good, 2, {"", "EXTREF", "Str2", "Str1"}), defaultOps(), 1},
         {"Ошибка: метка совпадает с внешней ссылкой", withInserted(good, 12, {"Str2", "WORD", "5", ""}), defaultOps(), 1},
