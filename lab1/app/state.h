@@ -45,6 +45,7 @@ vector<Example> examples;
 Pass1Result pass1;
 Pass2Result pass2;
 bool pass1Done = false;
+int lastPass = 0;  // до какого прохода дошёл пользователь: 0, 1 или 2
 int step1 = STEP_WAITING;
 int step2 = STEP_WAITING;
 vector<bool> badSourceRows;  // строки исходного текста с ошибками - красные

@@ -17,7 +17,7 @@ void onCommand(int id, int event) {
     if (event == BN_CLICKED && id == ID_PASS2) runPass2();
     if (event == BN_CLICKED && id == ID_THEME) toggleTheme();
     if (event == BN_CLICKED && id == ID_RESET) {
-        clearResults();
+        resetResults();
         setStatus("Результаты очищены. Нажмите «Первый проход» (F5).", colors.muted);
     }
     if (event == CBN_SELCHANGE && id == ID_EXAMPLES) {

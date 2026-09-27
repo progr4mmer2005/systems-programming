@@ -88,16 +88,6 @@ void showAddressFromSource() {
     EnableWindow(addressEdit, row >= 0);
 }
 
-// Пользователь изменил поле ввода -> записать адрес в операнд Start.
-void onAddressEdited() {
-    int row = startRow();
-    if (updatingAddress || row < 0) return;
-    sourceGrid.rows[row][2] = trim(windowText(addressEdit));
-    sourceGrid.refresh();
-    clearResults();
-    setStatus("Адрес загрузки изменён. Нажмите «Первый проход».", colors.muted);
-}
-
 // ---- проходы ----
 
 // Строка вспомогательной таблицы: адрес | формат | биты первого байта | код | метка.
@@ -110,7 +100,7 @@ Row supportTableRow(Line line) {
     return {hexAddress(line.address), to_string(line.format), firstByteBits(line.firstByte), line.code, line.label};
 }
 
-void runPass1() {
+void showPass1() {
     sourceGrid.commitEdit();
     opsGrid.commitEdit();
     clearResults();
@@ -143,7 +133,7 @@ void runPass1() {
     redrawWindow();
 }
 
-void runPass2() {
+void showPass2() {
     if (!pass1Done || !pass1.ok) return;
     pass2 = secondPass(pass1);
 
@@ -168,11 +158,50 @@ void runPass2() {
     redrawWindow();
 }
 
+// Кнопки "Первый проход" и "Второй проход".
+void runPass1() {
+    lastPass = 1;
+    showPass1();
+}
+
+void runPass2() {
+    if (!pass1Done || !pass1.ok) return;
+    lastPass = 2;
+    showPass2();
+}
+
+// Данные изменились: заново выполнить проходы, до которых дошёл пользователь.
+// Если первый проход теперь с ошибками, второй не выполняется, но после
+// исправления ошибок выполнится снова.
+void recalculate() {
+    if (lastPass == 0) {
+        clearResults();
+        setStatus("Данные изменены. Нажмите «Первый проход».", colors.muted);
+        return;
+    }
+    showPass1();
+    if (lastPass == 2) showPass2();
+}
+
+// Кнопка "Очистить" и выбор другого примера.
+void resetResults() {
+    lastPass = 0;
+    clearResults();
+}
+
 // Пользователь что-то поменял в исходном тексте или ТКО.
 void onInputChanged() {
-    clearResults();
     showAddressFromSource();
-    setStatus("Данные изменены. Нажмите «Первый проход».", colors.muted);
+    recalculate();
+}
+
+// Пользователь изменил поле адреса загрузки -> записать адрес в операнд Start.
+void onAddressEdited() {
+    int row = startRow();
+    if (updatingAddress || row < 0) return;
+    sourceGrid.rows[row][2] = trim(windowText(addressEdit));
+    sourceGrid.refresh();
+    recalculate();
 }
 
 void loadExample(int index) {
@@ -183,7 +212,7 @@ void loadExample(int index) {
     sourceGrid.select(0, 1);
     sourceGrid.scrollToTop();
     opsGrid.scrollToTop();
-    clearResults();
+    resetResults();
     showAddressFromSource();
     setStatus("Загружен пример «" + example.title + "». Нажмите «Первый проход» (F5).", colors.muted);
 }
