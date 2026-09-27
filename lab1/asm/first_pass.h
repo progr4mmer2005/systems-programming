@@ -148,13 +148,17 @@ Pass1Result firstPass(Table source, Table opTable) {
                 else
                     result.programName = label;
 
-                Number address = parseHex(op1, ADDRESS_DIGITS);
+                // Ведущие нули разрешены: 00001000 = 1000.
+                Number address = parseHex(op1, 8);
+                if (address.ok && address.value >= MEMORY_SIZE) address.ok = false;
                 if (op1 == "")
                     addError(result, row, "Не задан адрес загрузки (операнд Start, шестнадцатеричный)");
                 else if (!address.ok)
-                    addError(result, row, "Адрес загрузки «" + op1 + "»: нужно шестнадцатеричное число от 0000 до FFFF");
+                    addError(result, row, "Адрес загрузки «" + op1 + "»: нужно шестнадцатеричное число от 0001 до FFFF");
+                else if (address.value == 0)
+                    addError(result, row, "Адрес загрузки абсолютной программы не может быть 0 (с нуля начинается перемещаемая программа)");
                 if (op2 != "") addError(result, row, "У Start только один операнд — адрес загрузки");
-                counter = (int)address.value;
+                counter = address.ok ? (int)address.value : 0;
                 result.start = counter;
                 continue;
             }
