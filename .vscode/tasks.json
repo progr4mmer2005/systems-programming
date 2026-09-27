@@ -1,0 +1,41 @@
+{
+    "tasks": [
+        {
+            "type": "process",
+            "label": "Создать папку bin",
+            "command": "cmd.exe",
+            "args": ["/d", "/c", "if not exist bin mkdir bin"],
+            "options": {
+                "cwd": "${fileDirname}"
+            },
+            "presentation": {
+                "reveal": "silent"
+            }
+        },
+        {
+            "type": "cppbuild",
+            "label": "C/C++: g++.exe сборка активного файла",
+            "command": "C:\\MinGW\\bin\\g++.exe",
+            "args": [
+                "-fdiagnostics-color=always",
+                "-g",
+                "${file}",
+                "-o",
+                "${fileDirname}\\bin\\${fileBasenameNoExtension}.exe"
+            ],
+            "options": {
+                "cwd": "${fileDirname}"
+            },
+            "dependsOn": "Создать папку bin",
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "detail": "Собирает активный файл в папку bin/ рядом с ним."
+        }
+    ],
+    "version": "2.0.0"
+}
