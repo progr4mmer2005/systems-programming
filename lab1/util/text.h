@@ -21,6 +21,13 @@ string trim(string s) {
     return s.substr(start, end - start);
 }
 
+// "  LD " -> "  LD"
+string trimRight(string s) {
+    int end = len(s);
+    while (end > 0 && (s[end - 1] == ' ' || s[end - 1] == '\t')) end--;
+    return s.substr(0, end);
+}
+
 // "ld" -> "LD" (только латиница)
 string upper(string s) {
     for (int i = 0; i < len(s); i++) {

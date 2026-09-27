@@ -50,6 +50,8 @@ public:
     bool showRowNumbers = false;    // слева столбец "№"
     bool showTooltips = false;      // всплывающая подсказка с полным текстом строки
     string placeholder;             // надпись, пока таблица пуста
+    string name;                    // название таблицы для окна "как текст"
+    bool labelColumn = false;       // первый столбец - метка (важно для текста, см. grid_text.h)
 
     // ---- данные ----
     Table rows;
@@ -109,6 +111,11 @@ public:
 
     // grid_input.h
     bool onKeyDown(WPARAM key);
+
+    // grid_text.h
+    string toText();
+    Table fromText(string text);
+    void editAsText();
 };
 
 // Все таблицы окна - чтобы по окну Windows (HWND) найти нашу таблицу.
@@ -129,3 +136,4 @@ int mouseY(LPARAM lParam) { return (short)HIWORD(lParam); }
 #include "grid_edit.h"
 #include "grid_input.h"
 #include "grid_paint.h"
+#include "grid_text.h"

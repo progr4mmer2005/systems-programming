@@ -12,6 +12,8 @@ void createGrids() {
     sourceGrid.editable = true;
     sourceGrid.keepEmptyLastRow = true;
     sourceGrid.showRowNumbers = true;
+    sourceGrid.name = "Исходный текст";
+    sourceGrid.labelColumn = true;
     sourceGrid.create(mainWindow, ID_SOURCE, fonts.mono);
 
     opsGrid.headers = {"Мнемоника", "Код (hex)", "Длина"};
@@ -19,6 +21,7 @@ void createGrids() {
     opsGrid.editable = true;
     opsGrid.keepEmptyLastRow = true;
     opsGrid.showRowNumbers = true;
+    opsGrid.name = "Таблица кодов операций";
     opsGrid.create(mainWindow, ID_OPS, fonts.mono);
 
     // Средняя карточка - первый проход.

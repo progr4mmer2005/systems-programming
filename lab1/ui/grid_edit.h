@@ -93,8 +93,10 @@ void Grid::showContextMenu(LPARAM lParam) {
     }
     finishEdit(true, 0, 0, true);
 
-    const int ABOVE = 1, BELOW = 2, REMOVE = 3, EDIT = 4, CLEAR = 5;
+    const int ABOVE = 1, BELOW = 2, REMOVE = 3, EDIT = 4, CLEAR = 5, AS_TEXT = 6;
     HMENU menu = CreatePopupMenu();
+    AppendMenuW(menu, MF_STRING, AS_TEXT, L"Редактировать как текст...\tCtrl+E");
+    AppendMenuW(menu, MF_SEPARATOR, 0, NULL);
     AppendMenuW(menu, MF_STRING, ABOVE, L"Вставить строку выше\tIns");
     AppendMenuW(menu, MF_STRING, BELOW, L"Вставить строку ниже");
     AppendMenuW(menu, MF_STRING, REMOVE, L"Удалить строку\tCtrl+Del");
@@ -109,4 +111,5 @@ void Grid::showContextMenu(LPARAM lParam) {
     if (choice == REMOVE) deleteRow(currentRow);
     if (choice == EDIT) beginEdit(L"");
     if (choice == CLEAR) clearCell();
+    if (choice == AS_TEXT) editAsText();
 }

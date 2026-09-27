@@ -17,6 +17,7 @@ bool Grid::onKeyDown(WPARAM key) {
     else if (key == VK_INSERT) insertRow(currentRow);
     else if (key == VK_DELETE && ctrl) deleteRow(currentRow);
     else if (key == VK_DELETE) clearCell();
+    else if (key == 'E' && ctrl) editAsText();
     else return false;
     return true;
 }
