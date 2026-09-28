@@ -65,6 +65,8 @@ string parseByte(Line& line) {
         line.size = len(text.bytes);
         line.code = bytesToHex(text.bytes);
         if (text.problem != "") return "BYTE " + line.op1 + ": " + text.problem;
+    } else if (line.op1 != "" && line.op1[0] == '"') {
+        return "BYTE «" + line.op1 + "»: не закрыта кавычка - строка должна заканчиваться символом \"";
     } else {
         Number n = parseDecimal(line.op1);
         if (!n.ok || n.value < 0 || n.value > 255) return "BYTE «" + line.op1 + "»: нужно \"строка\" в двойных кавычках, число 0..255 или «?»";

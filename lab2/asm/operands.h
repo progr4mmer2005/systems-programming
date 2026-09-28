@@ -62,7 +62,8 @@ string joinOperands(string a, string b) {
     return a + " " + b;
 }
 
-// Разбор строки BYTE "текст".
+// Разбор строки BYTE "текст". Строка - всё между первой и последней кавычкой,
+// кавычки внутри - обычные символы: "Hello"" -> Hello"
 struct TextBytes {
     bool isText = false;  // операнд - строка в кавычках?
     string problem;       // что не так ("" - всё хорошо)
@@ -79,10 +80,6 @@ TextBytes parseText(string s) {
         int code = (unsigned char)c;
         if (code < 0x20 || code > 0x7E) {
             result.problem = "допустимы только латинские буквы, цифры и знаки (ASCII)";
-            break;
-        }
-        if (c == '"') {
-            result.problem = "кавычка внутри строки";
             break;
         }
         result.bytes.push_back(code);
