@@ -39,14 +39,13 @@ CellColors cellColors(int gridId, int row, int col) {
         result.text = col == 0 ? colors.muted : colors.error;
     }
 
-    // Двоичный код: неопределённая метка - красным фоном; тип записи, резерв
-    // и столбец "Команда" - серым.
+    // Двоичный код: неопределённая метка - красным фоном; тип записи и резерв - серым.
     if (gridId == ID_CODE) {
         bool isCode = row >= 1 && row <= len(pass2.code);
         if (isCode && pass2.code[row - 1].unresolved) {
             result.hasBackground = true;
             result.background = colors.errorBackground;
-        } else if (col == 0 || col == 4 || (isCode && pass2.code[row - 1].reserve)) {
+        } else if (col == 0 || (isCode && pass2.code[row - 1].reserve)) {
             result.hasText = true;
             result.text = colors.muted;
         }

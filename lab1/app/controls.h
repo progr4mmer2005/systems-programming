@@ -43,8 +43,8 @@ void createGrids() {
 
     // Правая карточка - второй проход.
 
-    codeGrid.headers = {"Тип", "Адрес", "Длина", "Машинный код", "Команда"};
-    codeGrid.widths = {8, 13, 15, 34, 30};
+    codeGrid.headers = {"Тип", "Адрес", "Длина", "Машинный код"};
+    codeGrid.widths = {12, 22, 20, 46};
     codeGrid.showTooltips = true;
     codeGrid.placeholder = "Появится после второго прохода";
     codeGrid.create(mainWindow, ID_CODE, fonts.mono);

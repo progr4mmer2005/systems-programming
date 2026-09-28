@@ -146,12 +146,12 @@ void showPass1() {
 //   E - конец модуля: точка входа (адрес загрузки).
 Table codeTable() {
     Table table;
-    table.push_back({"H", hexAddress(pass2.start), hexAddress(pass2.length), pass2.programName, "Start"});
+    table.push_back({"H", hexAddress(pass2.start), hexAddress(pass2.length), pass2.programName});
     for (CodeLine line : pass2.code) {
         string size = hex(line.size, line.size > 255 ? 4 : 2);
-        table.push_back({"T", hexAddress(line.address), size, line.code, line.source});
+        table.push_back({"T", hexAddress(line.address), size, line.code});
     }
-    table.push_back({"E", hexAddress(pass2.start), "", "", "End"});
+    table.push_back({"E", hexAddress(pass2.start), "", ""});
     return table;
 }
 
