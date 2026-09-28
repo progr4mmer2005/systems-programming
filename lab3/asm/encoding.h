@@ -26,8 +26,9 @@ using namespace std;
 
 #include "../util/text.h"
 
-const int ADDRESS_DIGITS = 4;     // адрес - 4 hex-цифры
-const int MEMORY_SIZE = 0x10000;  // память 64 КБ: адреса 0000..FFFF
+const int ADDRESS_DIGITS = 4;       // адрес внутри команды - 2 байта, 4 hex-цифры
+const int SHOW_ADDRESS_DIGITS = 6;  // в таблицах адреса пишутся 6 цифрами: 001000
+const int MEMORY_SIZE = 0x10000;    // память 64 КБ: адреса 000000..00FFFF
 const int MAX_OPCODE = 0x3F;      // код операции - 6 бит
 
 const int ADDRESSING_NONE = 0;      // биты 00
@@ -52,4 +53,8 @@ string firstByteBits(int byte) {
     return bits;
 }
 
-string hexAddress(long long address) { return hex(address, ADDRESS_DIGITS); }
+// Адрес для таблиц: 001015.
+string hexAddress(long long address) { return hex(address, SHOW_ADDRESS_DIGITS); }
+
+// Адрес внутри команды (2 байта): 1015.
+string addressField(long long address) { return hex(address, ADDRESS_DIGITS); }

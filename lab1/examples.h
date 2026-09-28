@@ -33,7 +33,7 @@ Table defaultOps() {
 // Программа, в которой есть все 4 формата команд.
 Table referenceSource() {
     return {
-        {"Exampl", "Start", "1000", ""},
+        {"Exampl", "Start", "001000", ""},
         {"", "LD", "R1", "One"},   // формат 4
         {"", "LD", "R2", "Two"},   // формат 4
         {"", "ADD", "R1", "R2"},   // формат 2, регистры

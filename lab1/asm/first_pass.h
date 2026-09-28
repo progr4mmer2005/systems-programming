@@ -149,7 +149,7 @@ Pass1Result firstPass(Table source, Table opTable) {
                 if (op1 == "")
                     addError(result, row, "Не задан адрес загрузки (операнд Start, шестнадцатеричный)");
                 else if (!address.ok)
-                    addError(result, row, "Адрес загрузки «" + op1 + "»: нужно шестнадцатеричное число от 0001 до FFFF");
+                    addError(result, row, "Адрес загрузки «" + op1 + "»: нужно шестнадцатеричное число от 000001 до 00FFFF");
                 else if (address.value == 0)
                     addError(result, row, "Адрес загрузки абсолютной программы не может быть 0 (с нуля начинается перемещаемая программа)");
                 if (op2 != "") addError(result, row, "У Start только один операнд — адрес загрузки");
@@ -208,7 +208,7 @@ Pass1Result firstPass(Table source, Table opTable) {
         }
 
         if (counter + line.size > MEMORY_SIZE) {
-            addError(result, row, "Программа выходит за пределы памяти (последний адрес FFFF)");
+            addError(result, row, "Программа выходит за пределы памяти (последний адрес 00FFFF)");
             overflow = true;
             break;
         }

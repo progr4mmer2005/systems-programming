@@ -40,7 +40,7 @@ Pass2Result secondPass(Pass1Result pass1) {
             string address;
             int i = findSymbol(pass1.symbols, line.label);
             if (i != -1) {
-                address = hexAddress(pass1.symbols[i].address);
+                address = addressField(pass1.symbols[i].address);
             } else {
                 result.errors.push_back({"source", line.row, "Метка «" + line.label + "» не определена"});
                 address = "????";

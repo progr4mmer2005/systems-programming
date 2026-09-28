@@ -28,7 +28,6 @@ void clearResults() {
     supportGrid.clear();
     symbolsGrid.clear();
     errors1Grid.clear();
-    headerGrid.clear();
     codeGrid.clear();
     errors2Grid.clear();
     EnableWindow(pass2Button, FALSE);
@@ -151,7 +150,6 @@ void showPass2() {
     if (!pass1Done || !pass1.ok) return;
     pass2 = secondPass(pass1);
 
-    headerGrid.setRows({{pass2.programName, hexAddress(pass2.length), hexAddress(pass2.start)}});
     codeGrid.setRows(codeTable());
     errors2Grid.placeholder = "Ошибок нет";
     errors2Grid.setRows(errorsTable(pass2.errors));

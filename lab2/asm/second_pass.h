@@ -57,7 +57,7 @@ Pass2Result secondPass(Pass1Result pass1) {
                     field = hex(offset & 0xFFFF, ADDRESS_DIGITS);  // отрицательное - в дополнительном коде: -6 -> FFFA
                 }
             } else {
-                field = hexAddress(pass1.symbols[i].address);
+                field = addressField(pass1.symbols[i].address);
                 result.relocations.push_back({line.address, sourceText(line), line.row});
             }
             out.code = replaceFirst(out.code, ADDRESS_GAP, field);

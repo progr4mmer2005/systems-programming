@@ -16,7 +16,6 @@ const int ID_OPS = 101;      // ТКО
 const int ID_SUPPORT = 102;  // вспомогательная таблица
 const int ID_SYMBOLS = 103;  // ТСИ
 const int ID_ERRORS1 = 104;  // ошибки первого прохода
-const int ID_HEADER = 105;   // заголовок объектного модуля
 const int ID_CODE = 106;     // двоичный код
 const int ID_ERRORS2 = 107;  // ошибки второго прохода
 const int ID_PASS1 = 200;
@@ -35,7 +34,7 @@ const int STEP_FAILED = 2;
 HWND mainWindow = NULL;
 Grid sourceGrid, opsGrid;                    // левая карточка - входные данные
 Grid supportGrid, symbolsGrid, errors1Grid;  // средняя - первый проход
-Grid headerGrid, codeGrid, errors2Grid;      // правая - второй проход
+Grid codeGrid, errors2Grid;                  // правая - второй проход
 HWND addressEdit = NULL;                     // поле "Адрес загрузки"
 HWND pass1Button = NULL, pass2Button = NULL, resetButton = NULL, themeButton = NULL;
 HWND examplesList = NULL;                    // выпадающий список "Пример"

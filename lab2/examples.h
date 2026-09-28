@@ -33,7 +33,7 @@ Table defaultOps() {
 // Программа, в которой есть все 4 формата команд. Только прямая адресация.
 Table referenceSource() {
     return {
-        {"Exampl", "Start", "0", ""},
+        {"Exampl", "Start", "000000", ""},
         {"", "LD", "R1", "One"},   // формат 4
         {"", "LD", "R2", "Two"},   // формат 4
         {"", "ADD", "R1", "R2"},   // формат 2, регистры
@@ -100,7 +100,7 @@ vector<Example> allExamples() {
         {"Только прямая адресация", good, defaultOps(), 0},
         {"Только относительная адресация", relativeSource(), defaultOps(), 0},
         {"Смешанная адресация", mixedSource(), defaultOps(), 0},
-        {"Ошибка: адрес в Start не 0", withRow(good, 0, {"Exampl", "Start", "1000", ""}), defaultOps(), 1},
+        {"Ошибка: адрес в Start не 0", withRow(good, 0, {"Exampl", "Start", "001000", ""}), defaultOps(), 1},
         {"Ошибка: [метка] у команды без адреса", withRow(good, 3, {"", "ADD", "R1", "[R2]"}), defaultOps(), 1},
         {"Ошибка: не закрыта скобка [метки", withRow(good, 4, {"", "SAV", "R1", "[Rez"}), defaultOps(), 1},
         {"Ошибка: метка определена дважды", withRow(good, 10, {"One", "WORD", "2", ""}), defaultOps(), 1},

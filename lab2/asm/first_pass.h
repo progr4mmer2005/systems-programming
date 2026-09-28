@@ -212,7 +212,7 @@ Pass1Result firstPass(Table source, Table opTable) {
         }
 
         if (counter + line.size > MEMORY_SIZE) {
-            addError(result, row, "Программа выходит за пределы памяти (последний адрес FFFF)");
+            addError(result, row, "Программа выходит за пределы памяти (последний адрес 00FFFF)");
             overflow = true;
             break;
         }

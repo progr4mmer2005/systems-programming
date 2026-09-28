@@ -35,7 +35,7 @@ Table defaultOps() {
 // маленькими буквами - имена сравниваются без учёта регистра.
 Table referenceSource() {
     return {
-        {"first", "Start", "0", ""},
+        {"first", "Start", "000000", ""},
         {"", "EXTDEF", "buf", "Str1"},
         {"", "EXTREF", "Str2", ""},
         {"Proc", "LD", "R1", "str3"},  // формат 4, прямая адресация
@@ -98,7 +98,7 @@ vector<Example> allExamples() {
         {"Ошибка: метка совпадает с внешней ссылкой", withInserted(good, 12, {"Str2", "WORD", "5", ""}), defaultOps(), 1},
         {"Ошибка: EXTREF не в начале программы", lateRef, defaultOps(), 1},
         {"Ошибка: метка у EXTDEF", withRow(good, 1, {"Names", "EXTDEF", "buf", "Str1"}), defaultOps(), 1},
-        {"Ошибка: адрес в Start не 0", withRow(good, 0, {"first", "Start", "1000", ""}), defaultOps(), 1},
+        {"Ошибка: адрес в Start не 0", withRow(good, 0, {"first", "Start", "001000", ""}), defaultOps(), 1},
         {"Ошибка: метка определена дважды", withRow(good, 10, {"Str1", "WORD", "?", ""}), defaultOps(), 1},
         {"Ошибка: метка — зарезервированное слово", withRow(good, 10, {"EXTREF", "WORD", "?", ""}), defaultOps(), 1},
         {"Ошибка: неизвестная команда", withRow(good, 5, {"", "ADDD", "R1", "R2"}), defaultOps(), 1},

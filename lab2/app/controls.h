@@ -84,7 +84,7 @@ void createButtons() {
     addressEdit = CreateWindowExW(0, L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_UPPERCASE | ES_AUTOHSCROLL, 0, 0, 10,
                                   10, mainWindow, (HMENU)(INT_PTR)ID_ADDRESS, GetModuleHandleW(NULL), NULL);
     SendMessageW(addressEdit, WM_SETFONT, (WPARAM)fonts.mono, TRUE);
-    SendMessageW(addressEdit, EM_LIMITTEXT, ADDRESS_DIGITS, 0);
+    SendMessageW(addressEdit, EM_LIMITTEXT, 8, 0);
 }
 
 void createControls(HWND window) {
