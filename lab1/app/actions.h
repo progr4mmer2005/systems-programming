@@ -97,7 +97,7 @@ Row supportTableRow(Line line) {
         if (line.reserve) code = "(резерв " + countText(line.size, "байт", "байта", "байт") + ")";
         return {hexAddress(line.address), line.mnemonic, "", code, ""};
     }
-    return {hexAddress(line.address), to_string(line.format), firstByteBits(line.firstByte), line.code, line.label};
+    return {hexAddress(line.address), hex(line.format, 2), firstByteBits(line.firstByte), line.code, line.label};
 }
 
 void showPass1() {

@@ -108,7 +108,7 @@ Row supportTableRow(Line line) {
     string label = line.label;
     if (line.addressing == ADDRESSING_RELATIVE) label = "[" + label + "]";
     if (findSymbol(pass1.extRefs, line.label) != -1) label += " (внешн.)";
-    return {hexAddress(line.address), to_string(line.format), firstByteBits(line.firstByte), line.code, label};
+    return {hexAddress(line.address), hex(line.format, 2), firstByteBits(line.firstByte), line.code, label};
 }
 
 void showPass1() {
