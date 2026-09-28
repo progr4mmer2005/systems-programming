@@ -3,11 +3,12 @@
 // Порядок разделов по методичке: заголовок, таблица внешних имён, список
 // внешних ссылок, таблица настройки, тело с кодом. Каждая строка начинается
 // с буквы раздела:
-//   H имя длина адрес       - заголовок
+//   H имя адрес длина       - заголовок: имя, адрес загрузки, длина
 //   D имя адрес             - внешнее имя (EXTDEF)
 //   R имя                   - внешняя ссылка (EXTREF)
 //   M адрес [имя]           - строка таблицы настройки
-//   T адрес байты           - код (резерв памяти без кода не пишется)
+//   T адрес длина байты     - код (резерв памяти без кода не пишется)
+//   E адрес                 - конец модуля, точка входа (адрес загрузки)
 #pragma once
 
 #include <string>
@@ -19,7 +20,7 @@ using namespace std;
 
 string objectModuleText(Pass2Result module) {
     string text;
-    text += "H " + module.programName + " " + hexAddress(module.length) + " " + hexAddress(module.start) + "\n";
+    text += "H " + module.programName + " " + hexAddress(module.start) + " " + hexAddress(module.length) + "\n";
     for (Symbol name : module.externalNames) text += "D " + name.name + " " + hexAddress(name.address) + "\n";
     for (Symbol ref : module.externalRefs) text += "R " + ref.name + "\n";
     for (Relocation relocation : module.relocations) {
@@ -28,7 +29,9 @@ string objectModuleText(Pass2Result module) {
         text += "\n";
     }
     for (CodeLine line : module.code) {
-        if (!line.reserve) text += "T " + hexAddress(line.address) + " " + line.code + "\n";
+        if (!line.reserve)
+            text += "T " + hexAddress(line.address) + " " + hex(line.size, line.size > 255 ? 4 : 2) + " " + line.code + "\n";
     }
+    text += "E " + hexAddress(module.start) + "\n";
     return text;
 }

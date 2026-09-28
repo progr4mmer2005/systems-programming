@@ -46,6 +46,7 @@ struct Pass1Result {
 // Строка двоичного кода (результат второго прохода).
 struct CodeLine {
     int address = 0;
+    int size = 0;             // длина в байтах
     string code;              // машинный код, байты через пробел
     string source;            // исходная команда - для наглядности
     bool reserve = false;     // резерв памяти без кода

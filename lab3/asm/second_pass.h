@@ -49,6 +49,7 @@ Pass2Result secondPass(Pass1Result pass1) {
     for (Line line : pass1.lines) {
         CodeLine out;
         out.address = line.address;
+        out.size = line.size;
         out.code = line.code;
         out.source = sourceText(line);
         out.reserve = line.reserve;

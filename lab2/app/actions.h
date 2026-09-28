@@ -137,14 +137,27 @@ void showPass1() {
     redrawWindow();
 }
 
+// Двоичный код в виде записей объектного модуля:
+//   H - заголовок: адрес загрузки, длина, имя программы;
+//   T - строка кода: адрес, длина в байтах, код;
+//   E - конец модуля: точка входа (адрес загрузки).
+Table codeTable() {
+    Table table;
+    table.push_back({"H", hexAddress(pass2.start), hexAddress(pass2.length), pass2.programName, "Start"});
+    for (CodeLine line : pass2.code) {
+        string size = hex(line.size, line.size > 255 ? 4 : 2);
+        table.push_back({"T", hexAddress(line.address), size, line.code, line.source});
+    }
+    table.push_back({"E", hexAddress(pass2.start), "", "", "End"});
+    return table;
+}
+
 void showPass2() {
     if (!pass1Done || !pass1.ok) return;
     pass2 = secondPass(pass1);
 
     headerGrid.setRows({{pass2.programName, hexAddress(pass2.length), hexAddress(pass2.start)}});
-    Table code;
-    for (CodeLine line : pass2.code) code.push_back({hexAddress(line.address), line.code, line.source});
-    codeGrid.setRows(code);
+    codeGrid.setRows(codeTable());
     Table relocations;
     for (Relocation relocation : pass2.relocations) relocations.push_back({hexAddress(relocation.address), relocation.source});
     relocGrid.placeholder = "Пусто: команд с прямым адресом нет";
