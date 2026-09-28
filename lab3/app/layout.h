@@ -92,7 +92,7 @@ void layout() {
     keysHintBox = {area.left, y + addressHeight + S(4), area.right, y + addressHeight + S(4) + hintHeight};
 
     // Средняя и правая карточки.
-    stackGrids(inside(middle), {{&supportGrid, "Вспомогательная таблица", "···· — адрес метки, 2-й проход", 46, 0},
+    stackGrids(inside(middle), {{&supportGrid, "Вспомогательная таблица", "МКОП = код * 4 + адресация", 46, 0},
                                 {&symbolsGrid, "Таблица символических имён (ТСИ)", "метка → адрес", 30, 0},
                                 {&errors1Grid, "Ошибки первого прохода", "", 24, 0}});
     // Правая карточка: заголовок; таблица настройки рядом с внешними именами

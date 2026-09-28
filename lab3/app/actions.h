@@ -98,17 +98,13 @@ void showAddressFromSource() {
 
 // ---- проходы ----
 
-// Строка вспомогательной таблицы: адрес | формат | биты первого байта | код | метка.
+// Строка вспомогательной таблицы: адрес | МКОП | операнд 1 | операнд 2.
+// МКОП команды - её первый байт, уже собранный из битов: код операции * 4 + тип
+// адресации (LD с прямой адресацией: 01 * 4 + 1 = 05). У данных - WORD / BYTE.
+// Операнды - как в исходном тексте, метки в них заменит адресами второй проход.
 Row supportTableRow(Line line) {
-    if (line.kind != "command") {
-        string code = line.code;
-        if (line.reserve) code = "(резерв " + countText(line.size, "байт", "байта", "байт") + ")";
-        return {hexAddress(line.address), line.mnemonic, "", code, ""};
-    }
-    string label = line.label;
-    if (line.addressing == ADDRESSING_RELATIVE) label = "[" + label + "]";
-    if (findSymbol(pass1.extRefs, line.label) != -1) label += " (внешн.)";
-    return {hexAddress(line.address), hex(line.format, 2), firstByteBits(line.firstByte), line.code, label};
+    string mkop = line.kind == "command" ? hex(line.firstByte, 2) : line.mnemonic;
+    return {hexAddress(line.address), mkop, line.op1, line.op2};
 }
 
 void showPass1() {

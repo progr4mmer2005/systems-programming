@@ -25,8 +25,8 @@ void createGrids() {
     opsGrid.create(mainWindow, ID_OPS, fonts.mono);
 
     // Средняя карточка - первый проход.
-    supportGrid.headers = {"Адрес", "Фмт", "КОП | адр.", "Код", "Метка"};
-    supportGrid.widths = {12, 10, 19, 32, 27};
+    supportGrid.headers = {"Адрес", "МКОП", "Операнд 1", "Операнд 2"};
+    supportGrid.widths = {20, 18, 31, 31};
     supportGrid.showTooltips = true;
     supportGrid.placeholder = "Появится после первого прохода";
     supportGrid.create(mainWindow, ID_SUPPORT, fonts.mono);
