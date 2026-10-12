@@ -12,6 +12,7 @@ struct Fonts {
     HFONT title;     // заголовок окна
     HFONT caption;   // заголовки таблиц
     HFONT mono;      // таблицы с кодом (все буквы одной ширины)
+    HFONT icon;      // значки (шрифт Windows со значками вместо букв)
 };
 
 Fonts fonts = {};
@@ -31,4 +32,5 @@ void createFonts() {
     fonts.title = makeFont(160, FW_SEMIBOLD, L"Segoe UI");
     fonts.caption = makeFont(105, FW_SEMIBOLD, L"Segoe UI");
     fonts.mono = makeFont(100, FW_NORMAL, L"Consolas");
+    fonts.icon = makeFont(110, FW_NORMAL, L"Segoe MDL2 Assets");
 }

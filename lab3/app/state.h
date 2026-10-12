@@ -7,6 +7,7 @@
 using namespace std;
 
 #include "../asm/program.h"
+#include "../platform/settings.h"
 #include "../examples.h"
 #include "../ui/grid.h"
 
@@ -57,6 +58,7 @@ vector<bool> badOpsRows;     // строки ТКО с ошибками
 string statusText;           // строка состояния внизу
 COLORREF statusColor = 0;
 bool updatingAddress = false;     // поле адреса меняется программой, а не пользователем
+int themeMode = THEME_SYSTEM;     // тема: THEME_SYSTEM, THEME_LIGHT или THEME_DARK
 
 // ---- разметка (считается в layout.h, рисуется в paint.h) ----
 

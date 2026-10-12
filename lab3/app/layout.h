@@ -121,10 +121,10 @@ void layout() {
     exampleLabelBox = {width - margin - listWidth - S(80), buttonY, width - margin - listWidth - S(10), buttonY + buttonHeight};
     statusBox = {margin + S(610), buttonY - S(4), exampleLabelBox.left - S(16), buttonY + buttonHeight + S(4)};
 
-    // Верхняя полоса: кнопка темы и этапы.
-    int themeWidth = S(150);
-    MoveWindow(themeButton, width - margin - themeWidth, S(24), themeWidth, S(34), TRUE);
-    stepsBox = {width / 2, 0, width - margin - themeWidth - S(24), topHeight};
+    // Верхняя полоса: этапы и маленькая кнопка темы в правом верхнем углу.
+    int themeSize = S(30);
+    MoveWindow(themeButton, width - margin - themeSize, S(8), themeSize, themeSize, TRUE);
+    stepsBox = {width / 2, 0, width - margin - themeSize - S(16), topHeight};
 
     for (Grid* grid : allGrids) grid->fitColumns();
 

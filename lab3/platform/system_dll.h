@@ -81,8 +81,8 @@ bool loadSystemFunctions() {
 
     if (!gdi.CreateFontW || !gdi.BitBlt || !comctl.InitCommonControlsEx || !comctl.ImageList_Create) return false;
 
-    // Включить таблицы и остальные стандартные элементы.
-    INITCOMMONCONTROLSEX controls = {sizeof(controls), ICC_LISTVIEW_CLASSES | ICC_STANDARD_CLASSES};
+    // Включить таблицы, подсказки и остальные стандартные элементы.
+    INITCOMMONCONTROLSEX controls = {sizeof(controls), ICC_LISTVIEW_CLASSES | ICC_STANDARD_CLASSES | ICC_BAR_CLASSES};
     comctl.InitCommonControlsEx(&controls);
     return true;
 }

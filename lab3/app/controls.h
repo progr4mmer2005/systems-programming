@@ -78,7 +78,9 @@ void createButtons() {
     pass1Button = makeButton(mainWindow, ID_PASS1, "Первый проход   F5", BUTTON_PRIMARY);
     pass2Button = makeButton(mainWindow, ID_PASS2, "Второй проход   F6", BUTTON_PRIMARY);
     resetButton = makeButton(mainWindow, ID_RESET, "Очистить результаты", BUTTON_SECONDARY);
-    themeButton = makeButton(mainWindow, ID_THEME, darkTheme ? "Светлая тема" : "Тёмная тема", BUTTON_SECONDARY);
+    themeButton = makeButton(mainWindow, ID_THEME, themeIcon(themeMode), BUTTON_ICON);
+    setTooltip(themeButton, "Тема: " + themeName(themeMode) + ". Щёлкните, чтобы сменить");
+    applyControlTheme(tooltip, L"DarkMode_Explorer");
     saveButton = makeButton(mainWindow, ID_SAVE, "Сохранить...", BUTTON_SECONDARY);
     EnableWindow(saveButton, FALSE);
 

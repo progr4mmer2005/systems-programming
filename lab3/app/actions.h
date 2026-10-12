@@ -277,12 +277,36 @@ void saveObjectModule() {
     setStatus("Объектный модуль сохранён в файл " + fromWide(path.data()), colors.ok);
 }
 
-void toggleTheme() {
-    setDarkTheme(!darkTheme);
-    saveDarkTheme(darkTheme);
+// ---- тема: как в Windows, светлая, тёмная ----
+
+// Значок кнопки темы - символ из шрифта Segoe MDL2 Assets: монитор, солнце, луна.
+string themeIcon(int mode) {
+    if (mode == THEME_LIGHT) return "\uE706";
+    if (mode == THEME_DARK) return "\uE708";
+    return "\uE7F4";
+}
+
+string themeName(int mode) {
+    if (mode == THEME_LIGHT) return "светлая";
+    if (mode == THEME_DARK) return "тёмная";
+    return "как в Windows";
+}
+
+// Перекрасить окно в цвета текущего режима темы.
+void applyWindowTheme() {
+    setDarkTheme(isDarkMode(themeMode));
     for (Grid* grid : allGrids) grid->applyTheme();
     applyControlTheme(examplesList, L"DarkMode_CFD");
+    applyControlTheme(tooltip, L"DarkMode_Explorer");
     applyTitleBarTheme(mainWindow);
-    setWindowText(themeButton, darkTheme ? "Светлая тема" : "Тёмная тема");
+    setWindowText(themeButton, themeIcon(themeMode));
+    setTooltip(themeButton, "Тема: " + themeName(themeMode) + ". Щёлкните, чтобы сменить");
     RedrawWindow(mainWindow, NULL, NULL, RDW_INVALIDATE | RDW_ERASE | RDW_FRAME | RDW_ALLCHILDREN);
+}
+
+// Кнопка темы: как в Windows -> светлая -> тёмная -> как в Windows.
+void nextTheme() {
+    themeMode = (themeMode + 1) % 3;
+    saveThemeMode(themeMode);
+    applyWindowTheme();
 }

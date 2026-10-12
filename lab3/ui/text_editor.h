@@ -1,5 +1,5 @@
-// Окно "Редактировать как текст": большое поле ввода и кнопки "Применить" / "Отмена".
-// Пока оно открыто, главное окно недоступно.
+// Окно "Редактировать как текст": большое поле ввода с номерами строк слева
+// и кнопки "Применить" / "Отмена". Пока оно открыто, главное окно недоступно.
 #pragma once
 
 #include <string>
@@ -30,6 +30,22 @@ string textEditorHint;
 bool textEditorClosed = false;
 bool textEditorAccepted = false;
 
+// Колонка с номерами строк слева от поля ввода.
+RECT textEditorGutter;
+int textEditorLineHeight = 0;
+int shownFirstLine = -1, shownLineCount = -1, shownCaretLine = -1;  // что сейчас нарисовано
+bool askingEditor = false;  // идёт наш собственный запрос к полю ввода
+
+// Спросить у поля ввода номер строки. Запрос - тоже сообщение полю, он проходит через
+// textEditorBoxProc, поэтому на время запроса номера строк там не обновляем, иначе
+// запрос вызывал бы сам себя без конца.
+int askEditor(UINT message, WPARAM wParam, LPARAM lParam) {
+    askingEditor = true;
+    int answer = (int)SendMessageW(textEditorBox, message, wParam, lParam);
+    askingEditor = false;
+    return answer;
+}
+
 void closeTextEditor(bool accept) {
     textEditorAccepted = accept;
     textEditorClosed = true;
@@ -42,10 +58,73 @@ void layoutTextEditor() {
     int pad = S(16);
     int buttonWidth = S(120), buttonHeight = S(34);
     int bottom = area.bottom - pad - buttonHeight;
-    MoveWindow(textEditorBox, pad + 1, pad + S(40) + 1, area.right - 2 * pad - 2, bottom - pad - (pad + S(40)) - 2, TRUE);
+    int gutterWidth = S(46);
+    int top = pad + S(40) + 1, height = bottom - pad - (pad + S(40)) - 2;
+    textEditorGutter = {pad + 1, top, pad + 1 + gutterWidth, top + height};
+    MoveWindow(textEditorBox, textEditorGutter.right, top, area.right - 2 * pad - 2 - gutterWidth, height, TRUE);
     MoveWindow(textEditorCancel, area.right - pad - buttonWidth, bottom, buttonWidth, buttonHeight, TRUE);
     MoveWindow(textEditorOk, area.right - pad - 2 * buttonWidth - S(10), bottom, buttonWidth, buttonHeight, TRUE);
     InvalidateRect(textEditorWindow, NULL, FALSE);
+}
+
+// Высота строки в поле ввода - высота строки шрифта.
+int measureLineHeight(HFONT font) {
+    HDC screen = GetDC(NULL);
+    HGDIOBJ oldFont = gdi.SelectObject(screen, font);
+    RECT box = {0, 0, 0, 0};
+    DrawTextW(screen, L"0", 1, &box, DT_CALCRECT | DT_SINGLELINE | DT_NOPREFIX);
+    gdi.SelectObject(screen, oldFont);
+    ReleaseDC(NULL, screen);
+    return box.bottom - box.top;
+}
+
+// Номера видимых строк, как в редакторе кода. Номер строки с курсором - синий.
+// Рисуем в памяти и копируем целиком, чтобы номера не мерцали при прокрутке.
+void drawLineNumbers(HDC canvas) {
+    RECT gutter = textEditorGutter;
+    int width = gutter.right - gutter.left, height = gutter.bottom - gutter.top;
+    if (width <= 0 || height <= 0) return;
+    HDC memory = gdi.CreateCompatibleDC(canvas);
+    HBITMAP picture = gdi.CreateCompatibleBitmap(canvas, width, height);
+    HGDIOBJ oldPicture = gdi.SelectObject(memory, picture);
+
+    RECT box = {0, 0, width, height};
+    fill(memory, box, colors.header);
+    RECT separator = {width - 1, 0, width, height};
+    fill(memory, separator, colors.border);
+
+    int first = askEditor(EM_GETFIRSTVISIBLELINE, 0, 0);
+    int count = askEditor(EM_GETLINECOUNT, 0, 0);
+    int caret = askEditor(EM_LINEFROMCHAR, (WPARAM)-1, 0);
+    RECT text;  // где в поле ввода начинается текст
+    askEditor(EM_GETRECT, 0, (LPARAM)&text);
+    RECT client;  // высота текста без горизонтальной полосы прокрутки
+    GetClientRect(textEditorBox, &client);
+    int bottom = min((int)client.bottom, height);
+    int y = text.top;
+    for (int line = first; line < count && y < bottom; line++) {
+        RECT number = {0, y, width - S(8), min(y + textEditorLineHeight, bottom)};
+        drawText(memory, to_string(line + 1), number, fonts.mono, line == caret ? colors.accent : colors.muted,
+                 DT_RIGHT | DT_TOP | DT_SINGLELINE);
+        y += textEditorLineHeight;
+    }
+
+    gdi.BitBlt(canvas, gutter.left, gutter.top, width, height, memory, 0, 0, SRCCOPY);
+    gdi.SelectObject(memory, oldPicture);
+    gdi.DeleteObject(picture);
+    gdi.DeleteDC(memory);
+    shownFirstLine = first;
+    shownLineCount = count;
+    shownCaretLine = caret;
+}
+
+// Текст прокрутили, добавили строку или передвинули курсор - перерисовать номера.
+void refreshLineNumbers() {
+    int first = askEditor(EM_GETFIRSTVISIBLELINE, 0, 0);
+    int count = askEditor(EM_GETLINECOUNT, 0, 0);
+    int caret = askEditor(EM_LINEFROMCHAR, (WPARAM)-1, 0);
+    if (first == shownFirstLine && count == shownLineCount && caret == shownCaretLine) return;
+    InvalidateRect(textEditorWindow, &textEditorGutter, FALSE);
 }
 
 void paintTextEditor(HWND window) {
@@ -59,11 +138,13 @@ void paintTextEditor(HWND window) {
     RECT hint = {pad, pad, area.right - pad, pad + S(36)};
     drawText(canvas, textEditorHint, hint, fonts.hint, colors.muted, DT_LEFT | DT_TOP | DT_WORDBREAK);
 
-    RECT border;
+    RECT border;  // рамка вокруг номеров строк и поля ввода
     GetWindowRect(textEditorBox, &border);
     MapWindowPoints(NULL, window, (POINT*)&border, 2);
+    border.left = textEditorGutter.left;
     InflateRect(&border, 1, 1);
     frame(canvas, border, colors.border);
+    drawLineNumbers(canvas);
     EndPaint(window, &paint);
 }
 
@@ -105,7 +186,7 @@ LRESULT CALLBACK textEditorProc(HWND window, UINT message, WPARAM wParam, LPARAM
 }
 
 // Клавиши в поле ввода: Ctrl+A - выделить всё, Ctrl+Enter - применить, Esc - отмена.
-LRESULT CALLBACK textEditorBoxProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
+LRESULT handleTextEditorBox(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
     bool ctrl = GetKeyState(VK_CONTROL) < 0;
     if (message == WM_KEYDOWN) {
         if (ctrl && wParam == 'A') {
@@ -124,6 +205,14 @@ LRESULT CALLBACK textEditorBoxProc(HWND hwnd, UINT message, WPARAM wParam, LPARA
     // Символы, которые дают эти сочетания клавиш, в текст не вставляем.
     if (message == WM_CHAR && (wParam == 1 || wParam == 10 || wParam == 27)) return 0;
     return CallWindowProcW(textEditorBoxOldProc, hwnd, message, wParam, lParam);
+}
+
+// Обработчик поля ввода: после любого сообщения проверяем, не пора ли перерисовать номера строк
+// (прокрутка колесом и полосой, ввод текста, стрелки, щелчок мышью).
+LRESULT CALLBACK textEditorBoxProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
+    LRESULT result = handleTextEditorBox(hwnd, message, wParam, lParam);
+    if (!askingEditor && message != WM_DESTROY && message != WM_NCDESTROY && hwnd == textEditorBox) refreshLineNumbers();
+    return result;
 }
 
 // Windows в поле ввода хочет переводы строк "\r\n".
@@ -160,6 +249,8 @@ TextEditorResult openTextEditor(HWND owner, string title, string hint, string te
     textEditorHint = hint;
     textEditorClosed = false;
     textEditorAccepted = false;
+    textEditorLineHeight = measureLineHeight(fonts.mono);
+    shownFirstLine = shownLineCount = shownCaretLine = -1;
 
     // Окно по центру главного окна.
     RECT ownerBox;

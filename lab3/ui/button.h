@@ -13,6 +13,7 @@ using namespace std;
 
 const int BUTTON_PRIMARY = 0;    // синяя
 const int BUTTON_SECONDARY = 1;  // серая
+const int BUTTON_ICON = 2;       // только значок, без фона - фон появляется при наведении
 
 struct ButtonInfo {
     HWND hwnd;
@@ -71,11 +72,41 @@ void drawButton(DRAWITEMSTRUCT* item) {
     } else if (kind == BUTTON_PRIMARY) {
         background = pressed ? colors.accentPressed : hover ? colors.accentHover : colors.accent;
         textColor = colors.onAccent;
+    } else if (kind == BUTTON_ICON) {
+        background = pressed ? colors.secondaryHover : hover ? colors.secondary : colors.window;
+        textColor = (pressed || hover) ? colors.ink : colors.muted;
     } else {
         background = (pressed || hover) ? colors.secondaryHover : colors.secondary;
         textColor = colors.ink;
     }
     fill(item->hDC, item->rcItem, colors.window);
     roundRect(item->hDC, item->rcItem, S(10), background, background);
-    drawText(item->hDC, windowText(item->hwndItem), item->rcItem, fonts.bold, textColor, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+    HFONT font = kind == BUTTON_ICON ? fonts.icon : fonts.bold;
+    drawText(item->hDC, windowText(item->hwndItem), item->rcItem, font, textColor, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+}
+
+// Всплывающая подсказка над элементом окна. Одна на всё окно, у каждого элемента свой текст.
+HWND tooltip = NULL;
+vector<HWND> tooltipControls;  // элементы, у которых уже есть подсказка
+
+void setTooltip(HWND control, string text) {
+    if (!tooltip) {
+        tooltip = CreateWindowExW(WS_EX_TOPMOST, TOOLTIPS_CLASSW, NULL, WS_POPUP | TTS_ALWAYSTIP | TTS_NOPREFIX, CW_USEDEFAULT,
+                                  CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, GetParent(control), NULL, GetModuleHandleW(NULL), NULL);
+    }
+    wstring wide = toWide(text);
+    TOOLINFOW tool = {};
+    tool.cbSize = sizeof(tool);
+    tool.uFlags = TTF_IDISHWND | TTF_SUBCLASS;
+    tool.hwnd = GetParent(control);
+    tool.uId = (UINT_PTR)control;
+    tool.lpszText = (LPWSTR)wide.c_str();
+    bool added = false;
+    for (HWND other : tooltipControls) added = added || other == control;
+    if (added) {
+        SendMessageW(tooltip, TTM_UPDATETIPTEXTW, 0, (LPARAM)&tool);
+    } else {
+        SendMessageW(tooltip, TTM_ADDTOOLW, 0, (LPARAM)&tool);
+        tooltipControls.push_back(control);
+    }
 }

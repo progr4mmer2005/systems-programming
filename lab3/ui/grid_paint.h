@@ -80,7 +80,20 @@ void Grid::drawCellLines(HDC canvas, int row) {
 LRESULT Grid::paintHeader(NMCUSTOMDRAW* draw) {
     if (draw->dwDrawStage == CDDS_PREPAINT) {
         fill(draw->hdc, draw->rc, colors.header);
-        return CDRF_NOTIFYITEMDRAW;
+        return CDRF_NOTIFYITEMDRAW | CDRF_NOTIFYPOSTPAINT;
+    }
+    // Справа от последнего столбца Windows рисует кусок заголовка сама, белым.
+    // Закрашиваем его после неё в цвет темы.
+    if (draw->dwDrawStage == CDDS_POSTPAINT) {
+        HWND header = draw->hdr.hwndFrom;
+        RECT rest, last;
+        GetClientRect(header, &rest);
+        int count = Header_GetItemCount(header);
+        if (count > 0 && Header_GetItemRect(header, count - 1, &last)) rest.left = last.right;
+        fill(draw->hdc, rest, colors.header);
+        RECT bottomLine = {rest.left, rest.bottom - 1, rest.right, rest.bottom};
+        fill(draw->hdc, bottomLine, colors.border);
+        return CDRF_DODEFAULT;
     }
     if (draw->dwDrawStage != CDDS_ITEMPREPAINT) return CDRF_DODEFAULT;
 
@@ -111,9 +124,16 @@ void Grid::paintPlaceholder() {
     RECT box, header;
     GetClientRect(hwnd, &box);
     GetWindowRect(ListView_GetHeader(hwnd), &header);
-    box.top += (header.bottom - header.top) + S(14);
+    box.top += header.bottom - header.top;
     box.left += S(12);
     box.right -= S(12);
-    drawText(canvas, placeholder, box, fonts.hint, colors.muted, DT_CENTER | DT_WORDBREAK);
+    // В низкой таблице (заголовок модуля - одна строка) надпись - посередине свободного места,
+    // в высокой - чуть ниже заголовка столбцов.
+    if (box.bottom - box.top < S(60)) {
+        drawText(canvas, placeholder, box, fonts.hint, colors.muted, DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+    } else {
+        box.top += S(14);
+        drawText(canvas, placeholder, box, fonts.hint, colors.muted, DT_CENTER | DT_WORDBREAK);
+    }
     ReleaseDC(hwnd, canvas);
 }

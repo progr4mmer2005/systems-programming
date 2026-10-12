@@ -15,7 +15,7 @@
 void onCommand(int id, int event) {
     if (event == BN_CLICKED && id == ID_PASS1) runPass1();
     if (event == BN_CLICKED && id == ID_PASS2) runPass2();
-    if (event == BN_CLICKED && id == ID_THEME) toggleTheme();
+    if (event == BN_CLICKED && id == ID_THEME) nextTheme();
     if (event == BN_CLICKED && id == ID_SAVE) saveObjectModule();
     if (event == BN_CLICKED && id == ID_RESET) {
         resetResults();
@@ -73,6 +73,10 @@ LRESULT CALLBACK windowProc(HWND window, UINT message, WPARAM wParam, LPARAM lPa
         onCommand(LOWORD(wParam), HIWORD(wParam));
         return 0;
     }
+    // В Windows переключили светлую / тёмную тему - если тема "как в Windows", перекраситься.
+    if (message == WM_SETTINGCHANGE && themeMode == THEME_SYSTEM && lParam && wstring((wchar_t*)lParam) == L"ImmersiveColorSet") {
+        applyWindowTheme();
+    }
     if (message == WM_DESTROY) {  // окно закрыли - выйти из программы
         PostQuitMessage(0);
         return 0;
@@ -102,7 +106,8 @@ int runApp() {
     screenDpi = gdi.GetDeviceCaps(screen, LOGPIXELSY);
     ReleaseDC(NULL, screen);
     createFonts();
-    setDarkTheme(loadDarkTheme());
+    themeMode = loadThemeMode();
+    setDarkTheme(isDarkMode(themeMode));
 
     // Регистрация класса окна.
     WNDCLASSEXW windowClass = {};
