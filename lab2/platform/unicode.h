@@ -1,6 +1,3 @@
-// Весь текст в программе - обычный string (UTF-8).
-// Windows работает с UTF-16 (wstring), эти функции переводят
-// из одного в другое при вызовах Windows.
 #pragma once
 
 #include <string>
@@ -25,7 +22,6 @@ string fromWide(wstring text) {
     return result;
 }
 
-// Текст из поля ввода Windows.
 string windowText(HWND window) {
     wchar_t buffer[512];
     GetWindowTextW(window, buffer, 512);

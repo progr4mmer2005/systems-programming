@@ -1,10 +1,3 @@
-// Функции Windows, которые Code Runner сам не подключает.
-//
-// Code Runner собирает командой "g++ labN.cpp -o labN" без дополнительных флагов.
-// Без флагов не подключаются библиотеки рисования (gdi32) и таблиц (comctl32).
-// Поэтому нужные функции загружаются из DLL при запуске.
-//
-// После loadSystemFunctions() функции вызываются через структуру: gdi.CreateSolidBrush(...).
 #pragma once
 
 #include "winapi.h"
@@ -20,6 +13,7 @@ struct GdiFunctions {
     decltype(&SetBkMode) SetBkMode;
     decltype(&RoundRect) RoundRect;
     decltype(&Ellipse) Ellipse;
+    decltype(&CreateEllipticRgn) CreateEllipticRgn;
     decltype(&GetDeviceCaps) GetDeviceCaps;
     decltype(&CreateCompatibleDC) CreateCompatibleDC;
     decltype(&CreateCompatibleBitmap) CreateCompatibleBitmap;
@@ -32,8 +26,6 @@ struct ComctlFunctions {
     decltype(&ImageList_Create) ImageList_Create;
 };
 
-// Необязательные: тёмные полосы прокрутки и тёмный заголовок окна.
-// Если их нет (старая Windows), программа просто работает без этого.
 struct ThemeFunctions {
     HRESULT(WINAPI* SetWindowTheme)(HWND, LPCWSTR, LPCWSTR);
     HRESULT(WINAPI* DwmSetWindowAttribute)(HWND, DWORD, LPCVOID, DWORD);
@@ -55,6 +47,7 @@ bool loadSystemFunctions() {
     gdi.SetBkMode = (decltype(gdi.SetBkMode))GetProcAddress(dll, "SetBkMode");
     gdi.RoundRect = (decltype(gdi.RoundRect))GetProcAddress(dll, "RoundRect");
     gdi.Ellipse = (decltype(gdi.Ellipse))GetProcAddress(dll, "Ellipse");
+    gdi.CreateEllipticRgn = (decltype(gdi.CreateEllipticRgn))GetProcAddress(dll, "CreateEllipticRgn");
     gdi.GetDeviceCaps = (decltype(gdi.GetDeviceCaps))GetProcAddress(dll, "GetDeviceCaps");
     gdi.CreateCompatibleDC = (decltype(gdi.CreateCompatibleDC))GetProcAddress(dll, "CreateCompatibleDC");
     gdi.CreateCompatibleBitmap = (decltype(gdi.CreateCompatibleBitmap))GetProcAddress(dll, "CreateCompatibleBitmap");
@@ -72,8 +65,7 @@ bool loadSystemFunctions() {
 
     if (!gdi.CreateFontW || !gdi.BitBlt || !comctl.InitCommonControlsEx || !comctl.ImageList_Create) return false;
 
-    // Включить таблицы и остальные стандартные элементы.
-    INITCOMMONCONTROLSEX controls = {sizeof(controls), ICC_LISTVIEW_CLASSES | ICC_STANDARD_CLASSES};
+    INITCOMMONCONTROLSEX controls = {sizeof(controls), ICC_LISTVIEW_CLASSES | ICC_STANDARD_CLASSES | ICC_BAR_CLASSES};
     comctl.InitCommonControlsEx(&controls);
     return true;
 }

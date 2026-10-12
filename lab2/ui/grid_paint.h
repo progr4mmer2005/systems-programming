@@ -1,6 +1,3 @@
-// Grid: как рисуются ячейки, линии сетки и заголовок столбцов.
-//
-// ListView рисует себя сам, но перед строкой и ячейкой запрашивает цвета.
 #pragma once
 
 #include "grid.h"
@@ -9,33 +6,28 @@ LRESULT Grid::paintCells(NMLVCUSTOMDRAW* draw) {
     int stage = draw->nmcd.dwDrawStage;
     int row = (int)draw->nmcd.dwItemSpec;
 
-    // Выделенную строку подсвечиваем сами - стандартную подсветку Windows отключаем.
     draw->nmcd.uItemState &= ~(CDIS_SELECTED | CDIS_FOCUS | CDIS_HOT);
 
-    // Начало рисования таблицы.
     if (stage == CDDS_PREPAINT) return CDRF_NOTIFYITEMDRAW;
 
-    // Перед строкой.
     if (stage == CDDS_ITEMPREPAINT) return CDRF_NOTIFYSUBITEMDRAW | CDRF_NOTIFYPOSTPAINT;
 
-    // После строки: дорисовать линии сетки.
     if (stage == CDDS_ITEMPOSTPAINT) {
         drawCellLines(draw->nmcd.hdc, row);
         return CDRF_DODEFAULT;
     }
 
-    // Перед ячейкой: выбрать цвет фона и текста.
     if (stage == (CDDS_ITEMPREPAINT | CDDS_SUBITEM)) {
-        if (draw->iSubItem < numberColumns()) {  // столбец "№"
+        if (draw->iSubItem < numberColumns()) {
             draw->clrText = row == currentRow ? colors.accent : colors.muted;
             draw->clrTextBk = colors.header;
             return CDRF_NEWFONT;
         }
         int col = draw->iSubItem - numberColumns();
-        COLORREF background = row % 2 == 1 ? colors.zebra : colors.card;  // строки через одну чуть темнее
+        COLORREF background = row % 2 == 1 ? colors.zebra : colors.card;
         COLORREF text = colors.ink;
 
-        CellColors custom = cellColors(id, row, col);  // что скажет окно лабы (app/events.h)
+        CellColors custom = cellColors(id, row, col);
         if (custom.hasBackground) background = custom.background;
         if (custom.hasText) text = custom.text;
 
@@ -53,7 +45,6 @@ LRESULT Grid::paintCells(NMLVCUSTOMDRAW* draw) {
     return CDRF_DODEFAULT;
 }
 
-// Линии между ячейками и синяя рамка вокруг выбранной ячейки (как в Excel).
 void Grid::drawCellLines(HDC canvas, int row) {
     RECT rowBox;
     if (!ListView_GetItemRect(hwnd, row, &rowBox, LVIR_BOUNDS)) return;
@@ -71,16 +62,26 @@ void Grid::drawCellLines(HDC canvas, int row) {
     if (editable && row == currentRow && GetFocus() == hwnd) {
         RECT box = cellBox(row, currentCol);
         frame(canvas, box, colors.accent);
-        InflateRect(&box, -1, -1);  // вторая рамка на пиксель внутрь - толщина 2
+        InflateRect(&box, -1, -1);
         frame(canvas, box, colors.accent);
     }
 }
 
-// Заголовок столбцов рисуем сами - чтобы он был в цветах темы.
 LRESULT Grid::paintHeader(NMCUSTOMDRAW* draw) {
     if (draw->dwDrawStage == CDDS_PREPAINT) {
         fill(draw->hdc, draw->rc, colors.header);
-        return CDRF_NOTIFYITEMDRAW;
+        return CDRF_NOTIFYITEMDRAW | CDRF_NOTIFYPOSTPAINT;
+    }
+    if (draw->dwDrawStage == CDDS_POSTPAINT) {
+        HWND header = draw->hdr.hwndFrom;
+        RECT rest, last;
+        GetClientRect(header, &rest);
+        int count = Header_GetItemCount(header);
+        if (count > 0 && Header_GetItemRect(header, count - 1, &last)) rest.left = last.right;
+        fill(draw->hdc, rest, colors.header);
+        RECT bottomLine = {rest.left, rest.bottom - 1, rest.right, rest.bottom};
+        fill(draw->hdc, bottomLine, colors.border);
+        return CDRF_DODEFAULT;
     }
     if (draw->dwDrawStage != CDDS_ITEMPREPAINT) return CDRF_DODEFAULT;
 
@@ -101,19 +102,23 @@ LRESULT Grid::paintHeader(NMCUSTOMDRAW* draw) {
         caption = headers[column - numberColumns()];
     RECT textBox = {box.left + S(8), box.top, box.right - S(4), box.bottom};
     drawText(draw->hdc, caption, textBox, fonts.hintBold, colors.muted, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
-    return CDRF_SKIPDEFAULT;  // стандартный заголовок не рисовать
+    return CDRF_SKIPDEFAULT;
 }
 
-// Надпись в пустой таблице результатов.
 void Grid::paintPlaceholder() {
     if (editable || rowCount() > 0 || placeholder == "") return;
     HDC canvas = GetDC(hwnd);
     RECT box, header;
     GetClientRect(hwnd, &box);
     GetWindowRect(ListView_GetHeader(hwnd), &header);
-    box.top += (header.bottom - header.top) + S(14);
+    box.top += header.bottom - header.top;
     box.left += S(12);
     box.right -= S(12);
-    drawText(canvas, placeholder, box, fonts.hint, colors.muted, DT_CENTER | DT_WORDBREAK);
+    if (box.bottom - box.top < S(60)) {
+        drawText(canvas, placeholder, box, fonts.hint, colors.muted, DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+    } else {
+        box.top += S(14);
+        drawText(canvas, placeholder, box, fonts.hint, colors.muted, DT_CENTER | DT_WORDBREAK);
+    }
     ReleaseDC(hwnd, canvas);
 }

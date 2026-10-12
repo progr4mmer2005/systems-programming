@@ -1,17 +1,8 @@
-// Grid: редактирование всей таблицы как обычного текста.
-//
-// Одна строка текста - одна строка таблицы. Столбцы разделяются пробелами или Tab,
-// текст в кавычках ("Hello world") не разбивается. Если у таблицы первый столбец -
-// метка (labelColumn), строка, которая начинается с пробела или Tab, - без метки:
-//
-//   Exampl  Start  1000
-//           LD     R1  One
 #pragma once
 
 #include "grid.h"
 #include "text_editor.h"
 
-// Сколько символов в строке UTF-8 (для выравнивания столбцов).
 int charCount(string s) {
     int count = 0;
     for (char c : s) {
@@ -22,7 +13,6 @@ int charCount(string s) {
 
 bool isSpace(char c) { return c == ' ' || c == '\t'; }
 
-// Слова строки через пробелы и Tab; текст в кавычках - одно слово.
 vector<string> splitWords(string line) {
     vector<string> words;
     string word;
@@ -43,14 +33,12 @@ vector<string> splitWords(string line) {
 string Grid::toText() {
     int columns = columnCount();
 
-    // Ширина каждого столбца, кроме последнего, - по самому длинному значению.
     vector<int> width(columns, 0);
     for (Row row : rows) {
         for (int col = 0; col < columns - 1; col++) width[col] = max(width[col], charCount(cell(row, col)));
     }
-    if (labelColumn) width[0] = max(width[0], 6);  // чтобы строка без метки начиналась с отступа
+    if (labelColumn) width[0] = max(width[0], 6);
 
-    // Пустые строки в конце не нужны.
     int count = rowCount();
     while (count > 0 && isEmptyRow(rows[count - 1])) count--;
 
@@ -83,7 +71,7 @@ Table Grid::fromText(string text) {
             if (len(row) < columnCount())
                 row.push_back(word);
             else
-                row.back() += " " + word;  // лишние слова - в последний столбец
+                row.back() += " " + word;
         }
         row.resize(columnCount());
         table.push_back(row);
@@ -104,7 +92,7 @@ void Grid::editAsText() {
     if (!result.ok) return;
 
     Table newRows = fromText(result.text);
-    if (newRows == fromText(toText())) return;  // ничего не поменяли
+    if (newRows == fromText(toText())) return;
     rows = newRows;
     changed();
     select(min(max(currentRow, 0), rowCount() - 1), currentCol);

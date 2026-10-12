@@ -1,4 +1,3 @@
-// Что делают кнопки и поля окна: проходы, примеры, адрес загрузки, тема.
 #pragma once
 
 #include "../asm/first_pass.h"
@@ -14,7 +13,6 @@ void setStatus(string text, COLORREF color) {
 
 void redrawWindow() { InvalidateRect(mainWindow, NULL, FALSE); }
 
-// Стереть результаты - при любом изменении входных данных.
 void clearResults() {
     pass1 = Pass1Result();
     pass2 = Pass2Result();
@@ -25,12 +23,13 @@ void clearResults() {
     badOpsRows.clear();
     errors1Grid.placeholder = "Появится после первого прохода";
     errors2Grid.placeholder = "Появится после второго прохода";
+    headerGrid.placeholder = "Появится после второго прохода";
     relocGrid.placeholder = "Появится после второго прохода";
     supportGrid.clear();
     symbolsGrid.clear();
     errors1Grid.clear();
-    headerGrid.clear();
     relocGrid.clear();
+    headerGrid.clear();
     codeGrid.clear();
     errors2Grid.clear();
     EnableWindow(pass2Button, FALSE);
@@ -39,7 +38,6 @@ void clearResults() {
     redrawWindow();
 }
 
-// Отметить строки исходного текста и ТКО, в которых нашлись ошибки.
 void markBadRows(vector<Error> errors) {
     badSourceRows = vector<bool>(sourceGrid.rowCount(), false);
     badOpsRows = vector<bool>(opsGrid.rowCount(), false);
@@ -51,14 +49,12 @@ void markBadRows(vector<Error> errors) {
     InvalidateRect(opsGrid.hwnd, NULL, FALSE);
 }
 
-// Ошибки -> строки таблицы "Где | Сообщение".
 Table errorsTable(vector<Error> errors) {
     Table table;
     for (Error error : errors) table.push_back({placeText(error), error.text});
     return table;
 }
 
-// Щелчок по ошибке - выделить строку, где она найдена.
 void showErrorRow(vector<Error> errors, int index) {
     if (index < 0 || index >= len(errors)) return;
     Error error = errors[index];
@@ -66,37 +62,8 @@ void showErrorRow(vector<Error> errors, int index) {
     if (error.place == "ops") opsGrid.select(error.row, 0);
 }
 
-// ---- адрес загрузки: поле ввода и операнд Start - одно и то же значение ----
-
-// Номер строки со Start (первая непустая строка) или -1.
-int startRow() {
-    for (int row = 0; row < sourceGrid.rowCount(); row++) {
-        if (isEmptyRow(sourceGrid.rows[row])) continue;
-        if (sameName(cell(sourceGrid.rows[row], 1), "START")) return row;
-        return -1;
-    }
-    return -1;
-}
-
-// Исходный текст изменился -> показать адрес из Start в поле ввода.
-void showAddressFromSource() {
-    int row = startRow();
-    string address = row >= 0 ? sourceGrid.rows[row][2] : "";
-    if (windowText(addressEdit) != address) {
-        updatingAddress = true;
-        setWindowText(addressEdit, address);
-        updatingAddress = false;
-    }
-    EnableWindow(addressEdit, row >= 0);
-}
-
-// ---- проходы ----
-
-// Строка вспомогательной таблицы: адрес | МКОП | операнд 1 | операнд 2.
-// МКОП команды - её первый байт, уже собранный из битов: код операции * 4 + тип
-// адресации (LD с прямой адресацией: 01 * 4 + 1 = 05). У данных - WORD / BYTE.
-// Операнды - как в исходном тексте, метки в них заменит адресами второй проход.
 Row supportTableRow(Line line) {
+    if (line.kind == "START") return {pass1.programName, "START", hexAddress(pass1.start), ""};
     string mkop = line.kind == "command" ? hex(line.firstByte, 2) : line.mnemonic;
     return {hexAddress(line.address), mkop, line.op1, line.op2};
 }
@@ -106,7 +73,7 @@ void showPass1() {
     opsGrid.commitEdit();
     clearResults();
 
-    pass1 = firstPass(sourceGrid.rows, opsGrid.rows);
+    pass1 = firstPass(sourceGrid.rows, opsGrid.rows, addressingMode);
     pass1Done = true;
 
     Table support, symbols;
@@ -121,7 +88,8 @@ void showPass1() {
     if (pass1.ok) {
         step1 = STEP_OK;
         EnableWindow(pass2Button, TRUE);
-        setStatus("Первый проход выполнен: " + countText(len(pass1.lines), "строка", "строки", "строк") + ", " +
+        int commands = len(pass1.lines) - 1;
+        setStatus("Первый проход выполнен: " + countText(commands, "строка", "строки", "строк") + ", " +
                       countText(len(pass1.symbols), "метка", "метки", "меток") + ", длина программы " +
                       hexAddress(pass1.length) + ". Можно запускать второй проход.",
                   colors.ok);
@@ -134,18 +102,12 @@ void showPass1() {
     redrawWindow();
 }
 
-// Двоичный код в виде записей объектного модуля:
-//   H - заголовок: адрес загрузки, длина, имя программы;
-//   T - строка кода: адрес, длина в байтах, код;
-//   E - конец модуля: точка входа (адрес загрузки).
 Table codeTable() {
     Table table;
-    table.push_back({"H", hexAddress(pass2.start), hexAddress(pass2.length), pass2.programName});
-    for (CodeLine line : pass2.code) {
-        string size = hex(line.size, line.size > 255 ? 4 : 2);
-        table.push_back({"T", hexAddress(line.address), size, line.code});
-    }
-    table.push_back({"E", hexAddress(pass2.start), "", ""});
+    table.push_back({"H", pass2.programName, hexAddress(pass2.start), hexAddress(pass2.length), ""});
+    for (CodeLine line : pass2.code) table.push_back({"T", "", hexAddress(line.address), hexLength(line.size), line.code});
+    for (Relocation relocation : pass2.relocations) table.push_back({"M", "", hexAddress(relocation.address), "", ""});
+    table.push_back({"E", "", hexAddress(pass2.entry), "", ""});
     return table;
 }
 
@@ -156,13 +118,13 @@ void showPass2() {
     headerGrid.setRows({{pass2.programName, hexAddress(pass2.length), hexAddress(pass2.start)}});
     codeGrid.setRows(codeTable());
     Table relocations;
-    for (Relocation relocation : pass2.relocations) relocations.push_back({hexAddress(relocation.address), relocation.source});
+    for (Relocation relocation : pass2.relocations) relocations.push_back({hexAddress(relocation.address)});
     relocGrid.placeholder = "Пусто: команд с прямым адресом нет";
     relocGrid.setRows(relocations);
     errors2Grid.placeholder = "Ошибок нет";
     errors2Grid.setRows(errorsTable(pass2.errors));
     markBadRows(pass2.errors);
-    EnableWindow(pass2Button, FALSE);  // по методичке после второго прохода кнопка снова неактивна
+    EnableWindow(pass2Button, FALSE);
 
     if (pass2.ok) {
         step2 = STEP_OK;
@@ -178,7 +140,6 @@ void showPass2() {
     redrawWindow();
 }
 
-// Кнопки "Первый проход" и "Второй проход".
 void runPass1() {
     lastPass = 1;
     showPass1();
@@ -190,9 +151,6 @@ void runPass2() {
     showPass2();
 }
 
-// Данные изменились: заново выполнить проходы, до которых дошёл пользователь.
-// Если первый проход теперь с ошибками, второй не выполняется, но после
-// исправления ошибок выполнится снова.
 void recalculate() {
     if (lastPass == 0) {
         clearResults();
@@ -203,24 +161,16 @@ void recalculate() {
     if (lastPass == 2) showPass2();
 }
 
-// Кнопка "Очистить" и выбор другого примера.
 void resetResults() {
     lastPass = 0;
     clearResults();
 }
 
-// Пользователь что-то поменял в исходном тексте или ТКО.
-void onInputChanged() {
-    showAddressFromSource();
-    recalculate();
-}
+void onInputChanged() { recalculate(); }
 
-// Пользователь изменил поле адреса загрузки -> записать адрес в операнд Start.
-void onAddressEdited() {
-    int row = startRow();
-    if (updatingAddress || row < 0) return;
-    sourceGrid.rows[row][2] = trim(windowText(addressEdit));
-    sourceGrid.refresh();
+void onModeChanged(int mode) {
+    if (mode < MODE_BOTH || mode > MODE_RELATIVE) return;
+    addressingMode = mode;
     recalculate();
 }
 
@@ -229,20 +179,41 @@ void loadExample(int index) {
     Example example = examples[index];
     sourceGrid.setRows(example.source);
     opsGrid.setRows(example.ops);
+    addressingMode = example.mode;
+    SendMessageW(modeList, CB_SETCURSEL, addressingMode, 0);
     sourceGrid.select(0, 1);
     sourceGrid.scrollToTop();
     opsGrid.scrollToTop();
     resetResults();
-    showAddressFromSource();
     setStatus("Загружен пример «" + example.title + "». Нажмите «Первый проход» (F5).", colors.muted);
 }
 
-void toggleTheme() {
-    setDarkTheme(!darkTheme);
-    saveDarkTheme(darkTheme);
+string themeIcon(int mode) {
+    if (mode == THEME_LIGHT) return "\uE706";
+    if (mode == THEME_DARK) return "\uE708";
+    return "\uE7F4";
+}
+
+string themeName(int mode) {
+    if (mode == THEME_LIGHT) return "светлая";
+    if (mode == THEME_DARK) return "тёмная";
+    return "как в Windows";
+}
+
+void applyWindowTheme() {
+    setDarkTheme(isDarkMode(themeMode));
     for (Grid* grid : allGrids) grid->applyTheme();
     applyControlTheme(examplesList, L"DarkMode_CFD");
+    applyControlTheme(modeList, L"DarkMode_CFD");
+    applyControlTheme(tooltip, L"DarkMode_Explorer");
     applyTitleBarTheme(mainWindow);
-    setWindowText(themeButton, darkTheme ? "Светлая тема" : "Тёмная тема");
+    setWindowText(themeButton, themeIcon(themeMode));
+    setTooltip(themeButton, "Тема: " + themeName(themeMode) + ". Щёлкните, чтобы сменить");
     RedrawWindow(mainWindow, NULL, NULL, RDW_INVALIDATE | RDW_ERASE | RDW_FRAME | RDW_ALLCHILDREN);
+}
+
+void nextTheme() {
+    themeMode = (themeMode + 1) % 3;
+    saveThemeMode(themeMode);
+    applyWindowTheme();
 }

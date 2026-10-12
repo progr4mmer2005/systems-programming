@@ -1,4 +1,3 @@
-// Готовые примеры для списка "Пример": правильная программа и программы с ошибками.
 #pragma once
 
 #include <string>
@@ -6,112 +5,142 @@
 
 using namespace std;
 
+#include "asm/encoding.h"
 #include "util/table.h"
 
 struct Example {
     string title;
     Table source;
     Table ops;
-    int failsAt;  // где пример должен "упасть": 0 - нигде, 1 - первый проход, 2 - второй
+    int failsAt;
+    int mode;
 };
 
-// ТКО по умолчанию: код - 6 бит (00..3F), длина = формат команды (1..4 байта).
 Table defaultOps() {
     return {
-        {"LD", "01", "4"},    // формат 4: LD  регистр, метка - загрузить слово в регистр
-        {"SAV", "02", "4"},   // формат 4: SAV регистр, метка - сохранить регистр в память
-        {"ADD", "03", "2"},   // формат 2: ADD регистр, регистр - сложить
-        {"SUB", "04", "2"},   // формат 2: SUB регистр, регистр - вычесть
-        {"JUMP", "05", "3"},  // формат 3: JUMP метка - переход
-        {"CALL", "06", "3"},  // формат 3: CALL метка - вызов подпрограммы
-        {"INT", "07", "2"},   // формат 2: INT число - прерывание
-        {"RET", "08", "1"},   // формат 1: RET - возврат из подпрограммы
-        {"HALT", "09", "1"},  // формат 1: HALT - остановка
+        {"JMP", "01", "4"},
+        {"LOADR1", "02", "4"},
+        {"LOADR2", "03", "4"},
+        {"ADD", "04", "2"},
+        {"SAVER1", "05", "4"},
+        {"INT", "06", "2"},
+        {"SUB", "07", "2"},
+        {"NOP", "08", "1"},
+        {"CALL", "09", "3"},
     };
 }
 
-// Программа, в которой есть все 4 формата команд. Только прямая адресация.
-Table referenceSource() {
+Table directSource() {
     return {
-        {"Exampl", "Start", "000000", ""},
-        {"", "LD", "R1", "One"},   // формат 4
-        {"", "LD", "R2", "Two"},   // формат 4
-        {"", "ADD", "R1", "R2"},   // формат 2, регистры
-        {"", "SAV", "R1", "Rez"},  // формат 4
-        {"", "CALL", "Show", ""},  // формат 3
-        {"", "HALT", "", ""},      // формат 1
-        {"Show", "INT", "5", ""},  // формат 2, число
-        {"", "RET", "", ""},       // формат 1
+        {"PROG", "START", "0", ""},
+        {"", "JMP", "L1", ""},
+        {"A1", "RESB", "10", ""},
+        {"A2", "RESW", "20", ""},
+        {"B1", "WORD", "4096", ""},
+        {"B2", "BYTE", "X\"2F4C008A\"", ""},
+        {"B3", "BYTE", "C\"Hello!\"", ""},
+        {"B4", "BYTE", "128", ""},
+        {"L1", "LOADR1", "B1", ""},
+        {"", "LOADR2", "B4", ""},
+        {"", "ADD", "R1", "R2"},
+        {"", "SAVER1", "L1", ""},
+        {"", "INT", "200", ""},
+        {"", "END", "10", ""},
+    };
+}
+
+Table relativeSource() {
+    Table source = directSource();
+    source[1] = {"", "JMP", "[L1]", ""};
+    source[8] = {"L1", "LOADR1", "[B1]", ""};
+    source[9] = {"", "LOADR2", "[B4]", ""};
+    source[11] = {"", "SAVER1", "[L1]", ""};
+    return source;
+}
+
+Table mixedSource() {
+    Table source = directSource();
+    source[1] = {"", "JMP", "[L1]", ""};
+    source[9] = {"", "LOADR2", "[B4]", ""};
+    source[11] = {"", "SAVER1", "[L1]", ""};
+    return source;
+}
+
+Table allFormatsSource() {
+    return {
+        {"PROG", "START", "0", ""},
+        {"", "LOADR1", "One", ""},
+        {"", "LOADR2", "[Two]", ""},
+        {"", "ADD", "R1", "R2"},
+        {"", "SAVER1", "[Rez]", ""},
+        {"", "CALL", "[Show]", ""},
+        {"", "NOP", "", ""},
+        {"Show", "INT", "5", ""},
+        {"", "CALL", "Exit", ""},
         {"One", "WORD", "1", ""},
         {"Two", "WORD", "2", ""},
         {"Rez", "WORD", "?", ""},
-        {"Text", "BYTE", "\"Hello\"", ""},
-        {"", "End", "", ""},
+        {"Text", "BYTE", "C\"Hello\"", ""},
+        {"Exit", "NOP", "", ""},
+        {"", "END", "", ""},
     };
 }
 
-// Копия таблицы, в которой строка index заменена на row.
+Table farJumpSource() {
+    return {
+        {"PROG", "START", "0", ""},
+        {"", "CALL", "[Far]", ""},
+        {"Buf", "RESB", "40000", ""},
+        {"Far", "NOP", "", ""},
+        {"", "END", "", ""},
+    };
+}
+
 Table withRow(Table table, int index, Row row) {
     table[index] = row;
     return table;
 }
 
-// Та же программа, но все метки в операндах в скобках - только относительная адресация.
-Table relativeSource() {
-    Table source = referenceSource();
-    source[1] = {"", "LD", "R1", "[One]"};
-    source[2] = {"", "LD", "R2", "[Two]"};
-    source[4] = {"", "SAV", "R1", "[Rez]"};
-    source[5] = {"", "CALL", "[Show]", ""};
-    return source;
-}
-
-// Смешанная адресация: часть меток в скобках, часть без.
-// JUMP [Loop] - переход назад, смещение получается отрицательным.
-Table mixedSource() {
-    Table source = referenceSource();
-    source[1] = {"Loop", "LD", "R1", "One"};
-    source[2] = {"", "LD", "R2", "[Two]"};
-    source[4] = {"", "SAV", "R1", "[Rez]"};
-    source[6] = {"", "JUMP", "[Loop]", ""};
-    return source;
-}
-
 vector<Example> allExamples() {
-    Table good = referenceSource();
+    Table good = directSource();
 
     Table noEnd = good;
     noEnd.pop_back();
 
     Table badOps = defaultOps();
-    badOps[1] = {"SAV", "01", "4"};
+    badOps[1] = {"LOADR1", "01", "4"};
 
-    // Несколько ошибок первого прохода в одной программе - все показываются сразу.
-    Table manyErrors = withRow(good, 2, {"", "LDD", "R2", "Two"});
-    manyErrors = withRow(manyErrors, 10, {"One", "WORD", "2", ""});
-    manyErrors = withRow(manyErrors, 4, {"", "SAV", "R1", "[Rez"});
+    Table manyErrors = withRow(mixedSource(), 9, {"", "LOADR3", "[B4]", ""});
+    manyErrors = withRow(manyErrors, 7, {"B1", "BYTE", "128", ""});
+    manyErrors = withRow(manyErrors, 11, {"", "SAVER1", "[L1", ""});
 
-    // Две опечатки в метках (одна с прямой, одна с относительной адресацией):
-    // первый проход проходит, второй находит обе.
-    Table manyUndefined = withRow(mixedSource(), 1, {"Loop", "LD", "R1", "Onw"});
-    manyUndefined = withRow(manyUndefined, 4, {"", "SAV", "R1", "[Res]"});
+    Table manyUndefined = withRow(mixedSource(), 8, {"L1", "LOADR1", "B5", ""});
+    manyUndefined = withRow(manyUndefined, 11, {"", "SAVER1", "[L2]", ""});
 
     return {
-        {"Только прямая адресация", good, defaultOps(), 0},
-        {"Только относительная адресация", relativeSource(), defaultOps(), 0},
-        {"Смешанная адресация", mixedSource(), defaultOps(), 0},
-        {"Ошибка: адрес в Start не 0", withRow(good, 0, {"Exampl", "Start", "001000", ""}), defaultOps(), 1},
-        {"Ошибка: [метка] у команды без адреса", withRow(good, 3, {"", "ADD", "R1", "[R2]"}), defaultOps(), 1},
-        {"Ошибка: не закрыта скобка [метки", withRow(good, 4, {"", "SAV", "R1", "[Rez"}), defaultOps(), 1},
-        {"Ошибка: метка определена дважды", withRow(good, 10, {"One", "WORD", "2", ""}), defaultOps(), 1},
-        {"Ошибка: метка — зарезервированное слово", withRow(good, 9, {"ADD", "WORD", "1", ""}), defaultOps(), 1},
-        {"Ошибка: неизвестная команда", withRow(good, 2, {"", "LDD", "R2", "Two"}), defaultOps(), 1},
-        {"Ошибка: операнды не подходят формату", withRow(good, 3, {"", "ADD", "R1", "One"}), defaultOps(), 1},
-        {"Ошибка: нет директивы End", noEnd, defaultOps(), 1},
-        {"Ошибка: неверное значение BYTE", withRow(good, 12, {"Text", "BYTE", "300", ""}), defaultOps(), 1},
-        {"Ошибка в ТКО: код занят дважды", good, badOps, 1},
-        {"Несколько ошибок сразу (1-й проход)", manyErrors, defaultOps(), 1},
-        {"Ошибка 2-го прохода: неопределённая метка [Res]", withRow(relativeSource(), 4, {"", "SAV", "R1", "[Res]"}), defaultOps(), 2},
-        {"Несколько ошибок сразу (2-й проход)", manyUndefined, defaultOps(), 2},
+        {"Только прямая адресация", good, defaultOps(), 0, MODE_DIRECT},
+        {"Только относительная адресация", relativeSource(), defaultOps(), 0, MODE_RELATIVE},
+        {"Смешанная адресация", mixedSource(), defaultOps(), 0, MODE_BOTH},
+        {"Все 4 формата команд", allFormatsSource(), defaultOps(), 0, MODE_BOTH},
+        {"Точка входа - метка (END L1)", withRow(good, 13, {"", "END", "L1", ""}), defaultOps(), 0, MODE_DIRECT},
+        {"Ошибка: [метка] в режиме «только прямая»", withRow(good, 1, {"", "JMP", "[L1]", ""}), defaultOps(), 1, MODE_DIRECT},
+        {"Ошибка: метка без скобок в режиме «только относительная»", withRow(relativeSource(), 9, {"", "LOADR2", "B4", ""}),
+         defaultOps(), 1, MODE_RELATIVE},
+        {"Ошибка: адрес в START не 0", withRow(good, 0, {"PROG", "START", "100", ""}), defaultOps(), 1, MODE_DIRECT},
+        {"Ошибка: [метка] у команды без адреса", withRow(mixedSource(), 12, {"", "INT", "[B4]", ""}), defaultOps(), 1, MODE_BOTH},
+        {"Ошибка: не закрыта скобка [метки", withRow(mixedSource(), 9, {"", "LOADR2", "[B4", ""}), defaultOps(), 1, MODE_BOTH},
+        {"Ошибка: метка определена дважды", withRow(good, 7, {"B1", "BYTE", "128", ""}), defaultOps(), 1, MODE_DIRECT},
+        {"Ошибка: метка - зарезервированное слово", withRow(good, 4, {"ADD", "WORD", "4096", ""}), defaultOps(), 1, MODE_DIRECT},
+        {"Ошибка: неизвестная команда", withRow(good, 9, {"", "LOADR3", "B4", ""}), defaultOps(), 1, MODE_DIRECT},
+        {"Ошибка: нет директивы END", noEnd, defaultOps(), 1, MODE_DIRECT},
+        {"Ошибка: неверная точка входа", withRow(good, 13, {"", "END", "100", ""}), defaultOps(), 1, MODE_DIRECT},
+        {"Ошибка: метки точки входа нет (END L9)", withRow(good, 13, {"", "END", "L9", ""}), defaultOps(), 1, MODE_DIRECT},
+        {"Ошибка: метка на строке END", withRow(good, 13, {"FIN", "END", "10", ""}), defaultOps(), 1, MODE_DIRECT},
+        {"Ошибка в ТКО: код занят дважды", good, badOps, 1, MODE_DIRECT},
+        {"Несколько ошибок сразу (1-й проход)", manyErrors, defaultOps(), 1, MODE_BOTH},
+        {"Ошибка 2-го прохода: неопределённая метка [B5]", withRow(relativeSource(), 9, {"", "LOADR2", "[B5]", ""}), defaultOps(), 2,
+         MODE_RELATIVE},
+        {"Ошибка 2-го прохода: смещение не помещается в 2 байта", farJumpSource(), defaultOps(), 2, MODE_BOTH},
+        {"Несколько ошибок сразу (2-й проход)", manyUndefined, defaultOps(), 2, MODE_BOTH},
     };
 }
