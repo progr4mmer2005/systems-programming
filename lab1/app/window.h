@@ -1,5 +1,3 @@
-// Главное окно и запуск программы.
-//
 #pragma once
 
 #include "../config.h"
@@ -11,11 +9,10 @@
 #include "layout.h"
 #include "paint.h"
 
-// Нажали кнопку или изменили поле / список.
 void onCommand(int id, int event) {
     if (event == BN_CLICKED && id == ID_PASS1) runPass1();
     if (event == BN_CLICKED && id == ID_PASS2) runPass2();
-    if (event == BN_CLICKED && id == ID_THEME) toggleTheme();
+    if (event == BN_CLICKED && id == ID_THEME) nextTheme();
     if (event == BN_CLICKED && id == ID_RESET) {
         resetResults();
         setStatus("Результаты очищены. Нажмите «Первый проход» (F5).", colors.muted);
@@ -29,30 +26,29 @@ void onCommand(int id, int event) {
 }
 
 LRESULT CALLBACK windowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam) {
-    if (message == WM_CREATE) {  // окно создано - создаём элементы
+    if (message == WM_CREATE) {
         createControls(window);
         return 0;
     }
-    if (message == WM_SIZE) {  // изменился размер - пересчитать раскладку
+    if (message == WM_SIZE) {
         if (mainWindow) layout();
         return 0;
     }
-    if (message == WM_GETMINMAXINFO) {  // минимальный размер окна
+    if (message == WM_GETMINMAXINFO) {
         MINMAXINFO* limits = (MINMAXINFO*)lParam;
         limits->ptMinTrackSize.x = S(1180);
         limits->ptMinTrackSize.y = S(720);
         return 0;
     }
-    if (message == WM_ERASEBKGND) return 1;  // фон рисуем сами в WM_PAINT
+    if (message == WM_ERASEBKGND) return 1;
     if (message == WM_PAINT) {
         paintWithoutFlicker(window);
         return 0;
     }
-    if (message == WM_DRAWITEM) {  // нарисовать нашу кнопку
+    if (message == WM_DRAWITEM) {
         drawButton((DRAWITEMSTRUCT*)lParam);
         return TRUE;
     }
-    // Цвета поля адреса и выпадающего списка - по теме.
     if (message == WM_CTLCOLOREDIT || message == WM_CTLCOLORSTATIC || message == WM_CTLCOLORLISTBOX) {
         HDC canvas = (HDC)wParam;
         bool enabled = IsWindowEnabled((HWND)lParam);
@@ -60,7 +56,6 @@ LRESULT CALLBACK windowProc(HWND window, UINT message, WPARAM wParam, LPARAM lPa
         gdi.SetBkColor(canvas, colors.card);
         return (LRESULT)inputBrush;
     }
-    // Сообщения от таблиц: "дай текст ячейки", "какие цвета" и т. п.
     if (message == WM_NOTIFY) {
         NMHDR* note = (NMHDR*)lParam;
         for (Grid* grid : allGrids) {
@@ -72,19 +67,21 @@ LRESULT CALLBACK windowProc(HWND window, UINT message, WPARAM wParam, LPARAM lPa
         onCommand(LOWORD(wParam), HIWORD(wParam));
         return 0;
     }
-    if (message == WM_DESTROY) {  // окно закрыли - выйти из программы
+    if (message == WM_SETTINGCHANGE && themeMode == THEME_SYSTEM && lParam && wstring((wchar_t*)lParam) == L"ImmersiveColorSet") {
+        applyWindowTheme();
+    }
+    if (message == WM_DESTROY) {
         PostQuitMessage(0);
         return 0;
     }
-    return DefWindowProcW(window, message, wParam, lParam);  // остальное - как обычно в Windows
+    return DefWindowProcW(window, message, wParam, lParam);
 }
 
-// F5 и F6 работают, где бы ни был курсор.
 bool handleHotkey(MSG message) {
     if (message.message != WM_KEYDOWN) return false;
     if (message.wParam != VK_F5 && message.wParam != VK_F6) return false;
     HWND focus = GetFocus();
-    if (focus) SendMessageW(focus, WM_KILLFOCUS, 0, 0);  // сохранить ячейку, которую сейчас редактируют
+    if (focus) SendMessageW(focus, WM_KILLFOCUS, 0, 0);
     if (message.wParam == VK_F5) runPass1();
     if (message.wParam == VK_F6 && IsWindowEnabled(pass2Button)) runPass2();
     return true;
@@ -101,9 +98,9 @@ int runApp() {
     screenDpi = gdi.GetDeviceCaps(screen, LOGPIXELSY);
     ReleaseDC(NULL, screen);
     createFonts();
-    setDarkTheme(loadDarkTheme());
+    themeMode = loadThemeMode();
+    setDarkTheme(isDarkMode(themeMode));
 
-    // Регистрация класса окна.
     WNDCLASSEXW windowClass = {};
     windowClass.cbSize = sizeof(windowClass);
     windowClass.lpfnWndProc = windowProc;
@@ -120,7 +117,6 @@ int runApp() {
     ShowWindow(window, SW_SHOWMAXIMIZED);
     UpdateWindow(window);
 
-    // Цикл сообщений.
     MSG message;
     while (GetMessageW(&message, NULL, 0, 0) > 0) {
         if (handleHotkey(message)) continue;

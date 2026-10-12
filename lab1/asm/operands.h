@@ -1,46 +1,36 @@
-// Разбор операндов команды и данных BYTE.
 #pragma once
 
 #include <string>
-#include <vector>
 
 using namespace std;
 
 #include "../util/text.h"
 #include "names.h"
 
-// Что должно стоять в операндах команды каждого формата - для текста ошибки.
 string expectedOperands(int format) {
     if (format == 1) return "без операндов";
     if (format == 2) return "<регистр> <регистр> или <число 0..255>";
-    if (format == 3) return "<метка>";
-    if (format == 4) return "<регистр> <метка>";
+    if (format == 3) return "<метка> (адрес - 2 байта)";
+    if (format == 4) return "<метка> (адрес - 3 байта)";
     return "?";
 }
 
-// Метка в операнде: имя, которое не регистр.
 bool isLabel(string s) { return isName(s) && !isRegister(s); }
 
-// Число 0..255 для формата 2.
 Number parseSmallNumber(string s) {
-    Number n = parseDecimal(s);
-    if (n.value < 0 || n.value > 255) n.ok = false;
+    Number n = parseCount(s);
+    if (n.value > 255) n.ok = false;
     return n;
 }
 
-// Что стоит в операндах a, b команды данного формата:
-//   "none", "registers", "number", "label", "register+label".
-// "" - операнды не подходят формату.
 string operandKind(int format, string a, string b) {
     if (format == 1 && a == "" && b == "") return "none";
     if (format == 2 && isRegister(a) && isRegister(b)) return "registers";
     if (format == 2 && parseSmallNumber(a).ok && b == "") return "number";
-    if (format == 3 && isLabel(a) && b == "") return "label";
-    if (format == 4 && isRegister(a) && isLabel(b)) return "register+label";
+    if ((format == 3 || format == 4) && isLabel(a) && b == "") return "label";
     return "";
 }
 
-// Операнды для текста ошибки: "R1 One", "(пусто)".
 string joinOperands(string a, string b) {
     if (a == "" && b == "") return "(пусто)";
     if (b == "") return a;
@@ -48,37 +38,58 @@ string joinOperands(string a, string b) {
     return a + " " + b;
 }
 
-// Разбор строки BYTE "текст". Строка - всё между первой и последней кавычкой,
-// кавычки внутри - обычные символы: "Hello"" -> Hello"
-struct TextBytes {
-    bool isText = false;  // операнд - строка в кавычках?
-    string problem;       // что не так ("" - всё хорошо)
-    vector<int> bytes;    // коды символов
+const int MAX_DATA_BYTES = 30;
+
+struct ByteString {
+    bool isString = false;
+    string problem;
+    string code;
+    int size = 0;
 };
 
-TextBytes parseText(string s) {
-    TextBytes result;
-    if (len(s) < 2 || s[0] != '"' || s[len(s) - 1] != '"') return result;
-    result.isText = true;
-    string body = s.substr(1, len(s) - 2);
-    if (body == "") result.problem = "пустая строка";
-    for (char c : body) {
-        int code = (unsigned char)c;
-        if (code < 0x20 || code > 0x7E) {
-            result.problem = "допустимы только латинские буквы, цифры и знаки (ASCII)";
-            break;
-        }
-        result.bytes.push_back(code);
+ByteString parseByteString(string s) {
+    ByteString result;
+    string prefix = upper(s.substr(0, 2));
+    int skip = 0;
+    if (prefix == "C\"" || prefix == "X\"")
+        skip = 2;
+    else if (s != "" && s[0] == '"')
+        skip = 1;
+    else
+        return result;
+    result.isString = true;
+    if (len(s) < skip + 1 || s[len(s) - 1] != '"') {
+        result.problem = "не закрыта кавычка - строка должна заканчиваться символом \"";
+        return result;
     }
-    return result;
-}
+    string body = s.substr(skip, len(s) - skip - 1);
+    if (body == "") {
+        result.problem = "пустая строка";
+        return result;
+    }
 
-// [72, 101] -> "48 65"
-string bytesToHex(vector<int> bytes) {
-    string result = "";
-    for (int i = 0; i < len(bytes); i++) {
-        if (i > 0) result += " ";
-        result += hex(bytes[i], 2);
+    if (prefix != "X\"") {
+        for (char c : body) {
+            int code = (unsigned char)c;
+            if (code < 0x20 || code > 0x7E) {
+                result.problem = "в строке допустимы только латинские буквы, цифры и знаки (ASCII)";
+                return result;
+            }
+            result.code += hex(code, 2);
+        }
+        result.size = len(body);
+    } else {
+        if (!parseHex(body, len(body)).ok) {
+            result.problem = "в X\"...\" допустимы только шестнадцатеричные цифры 0-9, A-F";
+            return result;
+        }
+        if (len(body) % 2 != 0) {
+            result.problem = "в X\"...\" нечётное число цифр - на байт нужно ровно 2 цифры";
+            return result;
+        }
+        result.code = upper(body);
+        result.size = len(body) / 2;
     }
+    if (result.size > MAX_DATA_BYTES) result.problem = "строка длиннее " + to_string(MAX_DATA_BYTES) + " байт";
     return result;
 }

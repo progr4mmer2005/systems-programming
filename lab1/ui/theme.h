@@ -1,4 +1,3 @@
-// Цвета окна: светлая и тёмная тема.
 #pragma once
 
 #include "../platform/system_dll.h"
@@ -27,9 +26,9 @@ const Palette DARK = {
     RGB(248, 113, 113), RGB(76, 29, 34), RGB(74, 222, 128),
 };
 
-Palette colors = LIGHT;      // текущие цвета - всё рисуется ими
+Palette colors = LIGHT;
 bool darkTheme = false;
-HBRUSH inputBrush = NULL;    // кисть для фона полей ввода
+HBRUSH inputBrush = NULL;
 
 void setDarkTheme(bool dark) {
     darkTheme = dark;
@@ -38,12 +37,10 @@ void setDarkTheme(bool dark) {
     inputBrush = gdi.CreateSolidBrush(colors.card);
 }
 
-// Тёмный вид системного элемента (полосы прокрутки, выпадающий список).
 void applyControlTheme(HWND control, const wchar_t* darkThemeName) {
     if (themeApi.SetWindowTheme) themeApi.SetWindowTheme(control, darkTheme ? darkThemeName : NULL, NULL);
 }
 
-// Тёмный заголовок окна (Windows 10 и новее). 20 - номер этой настройки в Windows.
 void applyTitleBarTheme(HWND window) {
     if (!themeApi.DwmSetWindowAttribute) return;
     BOOL on = darkTheme ? TRUE : FALSE;
