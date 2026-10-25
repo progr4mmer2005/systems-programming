@@ -11,14 +11,18 @@ using namespace std;
 struct Slot {
     Grid* grid;
     string caption;
-    string hint;
     int share;
     int fixedHeight;
 };
 
+const int MARGIN = 8;
+const int GAP = 8;
+const int TITLE_HEIGHT = 20;
+const int FIELD_HEIGHT = 23;
+const int BUTTON_HEIGHT = 26;
+
 void stackGrids(RECT area, vector<Slot> slots) {
-    int titleHeight = S(28);
-    int gap = S(12);
+    int titleHeight = S(TITLE_HEIGHT), gap = S(GAP);
     int fixedTotal = 0, shareTotal = 0;
     for (Slot slot : slots) {
         fixedTotal += titleHeight + slot.fixedHeight;
@@ -37,68 +41,48 @@ void stackGrids(RECT area, vector<Slot> slots) {
             heightLeft -= height;
         }
         height = max(height, S(40));
-
-        Section section;
-        section.title = {area.left, y, area.right, y + titleHeight};
-        section.box = {area.left + 1, y + titleHeight, area.right - 1, y + titleHeight + height};
-        section.caption = slot.caption;
-        section.hint = slot.hint;
-        sections.push_back(section);
-        MoveWindow(slot.grid->hwnd, section.box.left, section.box.top, section.box.right - section.box.left, height, TRUE);
+        sections.push_back({{area.left, y, area.right, y + titleHeight - S(3)}, slot.caption});
+        MoveWindow(slot.grid->hwnd, area.left, y + titleHeight, area.right - area.left, height, TRUE);
         y += titleHeight + height + gap;
     }
 }
 
-RECT inside(RECT card) {
-    int padding = S(16);
-    return {card.left + padding, card.top + padding - S(4), card.right - padding, card.bottom - padding};
-}
-
 void layout() {
-    RECT client;
+    RECT client, statusBox;
     GetClientRect(mainWindow, &client);
-    int width = client.right, height = client.bottom;
-    int margin = S(18), gap = S(14), topHeight = S(74), bottomHeight = S(68);
+    SendMessageW(statusBar, WM_SIZE, 0, 0);
+    GetWindowRect(statusBar, &statusBox);
+    int width = client.right, height = client.bottom - (statusBox.bottom - statusBox.top);
+    int margin = S(MARGIN), gap = S(GAP), fieldHeight = S(FIELD_HEIGHT), buttonHeight = S(BUTTON_HEIGHT);
+    int top = margin, bottom = height - buttonHeight - 2 * margin;
 
     int free = width - 2 * margin - 2 * gap;
-    RECT left = {margin, topHeight, margin + free * 36 / 100, height - bottomHeight};
-    RECT middle = {left.right + gap, topHeight, left.right + gap + free * 31 / 100, height - bottomHeight};
-    RECT right = {middle.right + gap, topHeight, width - margin, height - bottomHeight};
-    cards = {left, middle, right};
+    RECT left = {margin, top, margin + free * 36 / 100, bottom};
+    RECT middle = {left.right + gap, top, left.right + gap + free * 31 / 100, bottom};
+    RECT right = {middle.right + gap, top, width - margin, bottom};
     sections.clear();
 
-    RECT area = inside(left);
-    int addressHeight = S(30), hintHeight = S(18);
-    RECT gridsArea = area;
-    gridsArea.bottom -= addressHeight + hintHeight + S(14);
-    stackGrids(gridsArea, {{&sourceGrid, "Исходный текст", "правый клик — вставить / удалить строку", 62, 0},
-                           {&opsGrid, "Таблица кодов операций (ТКО)", "правый клик — меню", 38, 0}});
-    int y = gridsArea.bottom + S(10);
-    addressLabelBox = {area.left, y, area.left + S(190), y + addressHeight};
-    addressBox = {addressLabelBox.right, y, addressLabelBox.right + S(140), y + addressHeight};
-    int editHeight = S(18);
-    MoveWindow(addressEdit, addressBox.left + S(10), y + (addressHeight - editHeight) / 2, S(120), editHeight, TRUE);
-    keysHintBox = {area.left, y + addressHeight + S(4), area.right, y + addressHeight + S(4) + hintHeight};
+    RECT gridsArea = left;
+    gridsArea.bottom -= fieldHeight + gap;
+    stackGrids(gridsArea, {{&sourceGrid, "Исходный текст", 62, 0}, {&opsGrid, "Таблица кодов операций", 38, 0}});
+    int y = gridsArea.bottom + gap;
+    addressLabelBox = {left.left, y, left.left + S(105), y + fieldHeight};
+    MoveWindow(addressEdit, addressLabelBox.right, y, S(100), fieldHeight, TRUE);
 
-    stackGrids(inside(middle), {{&supportGrid, "Вспомогательная таблица", "МКОП = код * 4 + адресация", 46, 0},
-                                {&symbolsGrid, "Таблица символических имён (ТСИ)", "метка → адрес", 30, 0},
-                                {&errors1Grid, "Ошибки первого прохода", "", 24, 0}});
-    stackGrids(inside(right), {{&headerGrid, "Заголовок объектного модуля", "имя, длина, адрес загрузки", 0, S(47)},
-                               {&codeGrid, "Двоичный код", "H - заголовок, T - код, E - конец", 78, 0},
-                               {&errors2Grid, "Ошибки второго прохода", "", 22, 0}});
+    stackGrids(middle, {{&supportGrid, "Вспомогательная таблица", 46, 0},
+                        {&symbolsGrid, "Таблица символических имён", 30, 0},
+                        {&errors1Grid, "Ошибки первого прохода", 24, 0}});
+    stackGrids(right, {{&headerGrid, "Заголовок объектного модуля", 0, S(52)},
+                       {&codeGrid, "Двоичный код", 78, 0},
+                       {&errors2Grid, "Ошибки второго прохода", 22, 0}});
 
-    int buttonY = height - bottomHeight + S(16), buttonHeight = S(38), buttonWidth = S(190);
+    int buttonY = height - margin - buttonHeight, buttonWidth = S(130);
     MoveWindow(pass1Button, margin, buttonY, buttonWidth, buttonHeight, TRUE);
-    MoveWindow(pass2Button, margin + S(200), buttonY, buttonWidth, buttonHeight, TRUE);
-    MoveWindow(resetButton, margin + S(400), buttonY, buttonWidth, buttonHeight, TRUE);
-    int listWidth = S(340);
-    MoveWindow(examplesList, width - margin - listWidth, buttonY + S(5), listWidth, S(400), TRUE);
-    exampleLabelBox = {width - margin - listWidth - S(80), buttonY, width - margin - listWidth - S(10), buttonY + buttonHeight};
-    statusBox = {margin + S(610), buttonY - S(4), exampleLabelBox.left - S(16), buttonY + buttonHeight + S(4)};
-
-    int themeSize = S(30);
-    MoveWindow(themeButton, width - margin - themeSize, S(8), themeSize, themeSize, TRUE);
-    stepsBox = {width / 2, 0, width - margin - themeSize - S(16), topHeight};
+    MoveWindow(pass2Button, margin + buttonWidth + gap, buttonY, buttonWidth, buttonHeight, TRUE);
+    MoveWindow(resetButton, margin + 2 * (buttonWidth + gap), buttonY, S(150), buttonHeight, TRUE);
+    int listWidth = S(320);
+    MoveWindow(examplesList, width - margin - listWidth, buttonY + (buttonHeight - fieldHeight) / 2, listWidth, S(300), TRUE);
+    exampleLabelBox = {width - margin - listWidth - S(70), buttonY, width - margin - listWidth - S(6), buttonY + buttonHeight};
 
     for (Grid* grid : allGrids) grid->fitColumns();
 

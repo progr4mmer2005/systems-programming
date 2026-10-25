@@ -12,8 +12,6 @@ struct GdiFunctions {
     decltype(&SetBkColor) SetBkColor;
     decltype(&SetBkMode) SetBkMode;
     decltype(&RoundRect) RoundRect;
-    decltype(&Ellipse) Ellipse;
-    decltype(&CreateEllipticRgn) CreateEllipticRgn;
     decltype(&GetDeviceCaps) GetDeviceCaps;
     decltype(&CreateCompatibleDC) CreateCompatibleDC;
     decltype(&CreateCompatibleBitmap) CreateCompatibleBitmap;
@@ -26,14 +24,8 @@ struct ComctlFunctions {
     decltype(&ImageList_Create) ImageList_Create;
 };
 
-struct ThemeFunctions {
-    HRESULT(WINAPI* SetWindowTheme)(HWND, LPCWSTR, LPCWSTR);
-    HRESULT(WINAPI* DwmSetWindowAttribute)(HWND, DWORD, LPCVOID, DWORD);
-};
-
 GdiFunctions gdi = {};
 ComctlFunctions comctl = {};
-ThemeFunctions themeApi = {};
 
 bool loadSystemFunctions() {
     HMODULE dll = LoadLibraryW(L"gdi32.dll");
@@ -46,8 +38,6 @@ bool loadSystemFunctions() {
     gdi.SetBkColor = (decltype(gdi.SetBkColor))GetProcAddress(dll, "SetBkColor");
     gdi.SetBkMode = (decltype(gdi.SetBkMode))GetProcAddress(dll, "SetBkMode");
     gdi.RoundRect = (decltype(gdi.RoundRect))GetProcAddress(dll, "RoundRect");
-    gdi.Ellipse = (decltype(gdi.Ellipse))GetProcAddress(dll, "Ellipse");
-    gdi.CreateEllipticRgn = (decltype(gdi.CreateEllipticRgn))GetProcAddress(dll, "CreateEllipticRgn");
     gdi.GetDeviceCaps = (decltype(gdi.GetDeviceCaps))GetProcAddress(dll, "GetDeviceCaps");
     gdi.CreateCompatibleDC = (decltype(gdi.CreateCompatibleDC))GetProcAddress(dll, "CreateCompatibleDC");
     gdi.CreateCompatibleBitmap = (decltype(gdi.CreateCompatibleBitmap))GetProcAddress(dll, "CreateCompatibleBitmap");
@@ -57,11 +47,6 @@ bool loadSystemFunctions() {
     dll = LoadLibraryW(L"comctl32.dll");
     comctl.InitCommonControlsEx = (decltype(comctl.InitCommonControlsEx))GetProcAddress(dll, "InitCommonControlsEx");
     comctl.ImageList_Create = (decltype(comctl.ImageList_Create))GetProcAddress(dll, "ImageList_Create");
-
-    dll = LoadLibraryW(L"uxtheme.dll");
-    if (dll) themeApi.SetWindowTheme = (decltype(themeApi.SetWindowTheme))GetProcAddress(dll, "SetWindowTheme");
-    dll = LoadLibraryW(L"dwmapi.dll");
-    if (dll) themeApi.DwmSetWindowAttribute = (decltype(themeApi.DwmSetWindowAttribute))GetProcAddress(dll, "DwmSetWindowAttribute");
 
     if (!gdi.CreateFontW || !gdi.BitBlt || !comctl.InitCommonControlsEx || !comctl.ImageList_Create) return false;
 

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "../config.h"
-#include "../platform/settings.h"
 #include "../platform/startup.h"
 #include "actions.h"
 #include "controls.h"
@@ -12,10 +11,9 @@
 void onCommand(int id, int event) {
     if (event == BN_CLICKED && id == ID_PASS1) runPass1();
     if (event == BN_CLICKED && id == ID_PASS2) runPass2();
-    if (event == BN_CLICKED && id == ID_THEME) nextTheme();
     if (event == BN_CLICKED && id == ID_RESET) {
         resetResults();
-        setStatus("Результаты очищены. Нажмите «Первый проход» (F5).", colors.muted);
+        setStatus("Результаты очищены. Нажмите «Первый проход» (F5).");
     }
     if (event == CBN_SELCHANGE && id == ID_EXAMPLES) {
         int index = (int)SendMessageW(examplesList, CB_GETCURSEL, 0, 0);
@@ -44,17 +42,6 @@ LRESULT CALLBACK windowProc(HWND window, UINT message, WPARAM wParam, LPARAM lPa
         paintWithoutFlicker(window);
         return 0;
     }
-    if (message == WM_DRAWITEM) {
-        drawButton((DRAWITEMSTRUCT*)lParam);
-        return TRUE;
-    }
-    if (message == WM_CTLCOLOREDIT || message == WM_CTLCOLORSTATIC || message == WM_CTLCOLORLISTBOX) {
-        HDC canvas = (HDC)wParam;
-        bool enabled = IsWindowEnabled((HWND)lParam);
-        gdi.SetTextColor(canvas, enabled ? colors.ink : colors.muted);
-        gdi.SetBkColor(canvas, colors.card);
-        return (LRESULT)inputBrush;
-    }
     if (message == WM_NOTIFY) {
         NMHDR* note = (NMHDR*)lParam;
         for (Grid* grid : allGrids) {
@@ -66,8 +53,10 @@ LRESULT CALLBACK windowProc(HWND window, UINT message, WPARAM wParam, LPARAM lPa
         onCommand(LOWORD(wParam), HIWORD(wParam));
         return 0;
     }
-    if (message == WM_SETTINGCHANGE && themeMode == THEME_SYSTEM && lParam && wstring((wchar_t*)lParam) == L"ImmersiveColorSet") {
-        applyWindowTheme();
+    if (message == WM_SYSCOLORCHANGE) {
+        loadSystemColors();
+        for (Grid* grid : allGrids) grid->applyTheme();
+        RedrawWindow(window, NULL, NULL, RDW_INVALIDATE | RDW_ERASE | RDW_ALLCHILDREN);
     }
     if (message == WM_DESTROY) {
         PostQuitMessage(0);
@@ -97,8 +86,7 @@ int runApp() {
     screenDpi = gdi.GetDeviceCaps(screen, LOGPIXELSY);
     ReleaseDC(NULL, screen);
     createFonts();
-    themeMode = loadThemeMode();
-    setDarkTheme(isDarkMode(themeMode));
+    loadSystemColors();
 
     WNDCLASSEXW windowClass = {};
     windowClass.cbSize = sizeof(windowClass);
@@ -109,10 +97,9 @@ int runApp() {
     windowClass.lpszClassName = L"AsmLab2Window";
     RegisterClassExW(&windowClass);
 
-    string title = LAB_TITLE + " — " + LAB_SUBTITLE;
+    string title = LAB_TITLE;
     HWND window = CreateWindowExW(0, L"AsmLab2Window", toWide(title).c_str(), WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN, CW_USEDEFAULT,
                                   CW_USEDEFAULT, S(1440), S(880), NULL, NULL, GetModuleHandleW(NULL), NULL);
-    applyTitleBarTheme(window);
     ShowWindow(window, SW_SHOWMAXIMIZED);
     UpdateWindow(window);
 

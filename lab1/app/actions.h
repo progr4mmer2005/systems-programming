@@ -2,14 +2,9 @@
 
 #include "../asm/first_pass.h"
 #include "../asm/second_pass.h"
-#include "../platform/settings.h"
 #include "state.h"
 
-void setStatus(string text, COLORREF color) {
-    statusText = text;
-    statusColor = color;
-    InvalidateRect(mainWindow, &statusBox, FALSE);
-}
+void setStatus(string text) { SendMessageW(statusBar, SB_SETTEXTW, 0, (LPARAM)toWide(text).c_str()); }
 
 void redrawWindow() { InvalidateRect(mainWindow, NULL, FALSE); }
 
@@ -17,8 +12,6 @@ void clearResults() {
     pass1 = Pass1Result();
     pass2 = Pass2Result();
     pass1Done = false;
-    step1 = STEP_WAITING;
-    step2 = STEP_WAITING;
     badSourceRows.clear();
     badOpsRows.clear();
     errors1Grid.placeholder = "Появится после первого прохода";
@@ -104,18 +97,14 @@ void showPass1() {
     markBadRows(pass1.errors);
 
     if (pass1.ok) {
-        step1 = STEP_OK;
         EnableWindow(pass2Button, TRUE);
         int commands = len(pass1.lines) - 1;
         setStatus("Первый проход выполнен: " + countText(commands, "строка", "строки", "строк") + ", " +
                       countText(len(pass1.symbols), "метка", "метки", "меток") + ", длина программы " +
-                      hexAddress(pass1.length) + ". Можно запускать второй проход.",
-                  colors.ok);
+                      hexAddress(pass1.length) + ". Можно запускать второй проход.");
     } else {
-        step1 = STEP_FAILED;
         setStatus("Первый проход: " + countText(len(pass1.errors), "ошибка", "ошибки", "ошибок") +
-                      ". Щёлкните по ошибке — строка подсветится в таблице.",
-                  colors.error);
+                      ". Щёлкните по ошибке — строка подсветится в таблице.");
     }
     redrawWindow();
 }
@@ -140,13 +129,10 @@ void showPass2() {
     EnableWindow(pass2Button, FALSE);
 
     if (pass2.ok) {
-        step2 = STEP_OK;
-        setStatus("Второй проход выполнен: объектный модуль готов.", colors.ok);
+        setStatus("Второй проход выполнен: объектный модуль готов.");
     } else {
-        step2 = STEP_FAILED;
         setStatus("Второй проход: " + countText(len(pass2.errors), "ошибка", "ошибки", "ошибок") +
-                      ". Исправьте исходный текст и повторите.",
-                  colors.error);
+                      ". Исправьте исходный текст и повторите.");
     }
     redrawWindow();
 }
@@ -165,7 +151,7 @@ void runPass2() {
 void recalculate() {
     if (lastPass == 0) {
         clearResults();
-        setStatus("Данные изменены. Нажмите «Первый проход».", colors.muted);
+        setStatus("Данные изменены. Нажмите «Первый проход».");
         return;
     }
     showPass1();
@@ -200,34 +186,6 @@ void loadExample(int index) {
     opsGrid.scrollToTop();
     resetResults();
     showAddressFromSource();
-    setStatus("Загружен пример «" + example.title + "». Нажмите «Первый проход» (F5).", colors.muted);
+    setStatus("Загружен пример «" + example.title + "». Нажмите «Первый проход» (F5).");
 }
 
-string themeIcon(int mode) {
-    if (mode == THEME_LIGHT) return "\uE706";
-    if (mode == THEME_DARK) return "\uE708";
-    return "\uE7F4";
-}
-
-string themeName(int mode) {
-    if (mode == THEME_LIGHT) return "светлая";
-    if (mode == THEME_DARK) return "тёмная";
-    return "как в Windows";
-}
-
-void applyWindowTheme() {
-    setDarkTheme(isDarkMode(themeMode));
-    for (Grid* grid : allGrids) grid->applyTheme();
-    applyControlTheme(examplesList, L"DarkMode_CFD");
-    applyControlTheme(tooltip, L"DarkMode_Explorer");
-    applyTitleBarTheme(mainWindow);
-    setWindowText(themeButton, themeIcon(themeMode));
-    setTooltip(themeButton, "Тема: " + themeName(themeMode) + ". Щёлкните, чтобы сменить");
-    RedrawWindow(mainWindow, NULL, NULL, RDW_INVALIDATE | RDW_ERASE | RDW_FRAME | RDW_ALLCHILDREN);
-}
-
-void nextTheme() {
-    themeMode = (themeMode + 1) % 3;
-    saveThemeMode(themeMode);
-    applyWindowTheme();
-}

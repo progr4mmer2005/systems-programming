@@ -24,8 +24,6 @@ void onGridRowClicked(int gridId, int row);
 CellColors cellColors(int gridId, int row, int col);
 
 const int NUMBER_COLUMN_WIDTH = 40;
-const int PLUS_TIMER = 0x5A17;
-const int PLUS_DELAY = 400;
 
 LRESULT CALLBACK gridProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK cellEditorProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
@@ -50,17 +48,12 @@ public:
     int id = 0;
     HWND hwnd = NULL;
     HFONT font = NULL;
-    int rowHeight = 0;
     WNDPROC oldProc = NULL;
     WNDPROC oldEditorProc = NULL;
     HWND editor = NULL;
     int editRow = -1;
     int editCol = -1;
     bool finishingEdit = false;
-    HWND plusButton = NULL;
-    int plusAt = -1;
-    int hoverAt = -1;
-    bool trackingMouse = false;
 
     void create(HWND parent, int gridId, HFONT gridFont);
     void applyTheme();
@@ -89,7 +82,6 @@ public:
 
     LRESULT paintCells(NMLVCUSTOMDRAW* draw);
     void drawCellLines(HDC canvas, int row);
-    LRESULT paintHeader(NMCUSTOMDRAW* draw);
     void paintPlaceholder();
 
     void beginEdit(wstring typed);
@@ -100,13 +92,6 @@ public:
     void showContextMenu(LPARAM lParam);
 
     bool onKeyDown(WPARAM key);
-
-    int boundaryY(int at);
-    int boundaryAt(int y);
-    void onMouseMove(int y);
-    void showPlus();
-    void hidePlus();
-    void hidePlusIfAway();
 
     string toText();
     Table fromText(string text);
@@ -129,5 +114,4 @@ int mouseY(LPARAM lParam) { return (short)HIWORD(lParam); }
 #include "grid_edit.h"
 #include "grid_input.h"
 #include "grid_paint.h"
-#include "grid_plus.h"
 #include "grid_text.h"

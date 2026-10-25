@@ -23,7 +23,6 @@ LRESULT CALLBACK gridProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
     if (message == WM_NOTIFY) {
         NMHDR* note = (NMHDR*)lParam;
         if (note->hwndFrom == ListView_GetHeader(hwnd)) {
-            if (note->code == (UINT)NM_CUSTOMDRAW) return grid->paintHeader((NMCUSTOMDRAW*)lParam);
             if (note->code == (UINT)HDN_BEGINTRACKW || note->code == (UINT)HDN_DIVIDERDBLCLICKW) return TRUE;
         }
     }
@@ -44,20 +43,8 @@ LRESULT CALLBACK gridProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     if (message == WM_VSCROLL || message == WM_HSCROLL || message == WM_MOUSEWHEEL) {
         grid->finishEdit(true, 0, 0, true);
-        grid->hidePlusIfAway();
     }
 
-    if (message == WM_MOUSEMOVE && grid->editable) grid->onMouseMove(mouseY(lParam));
-
-    if (message == WM_MOUSELEAVE) {
-        grid->trackingMouse = false;
-        grid->hidePlusIfAway();
-    }
-
-    if (message == WM_TIMER && wParam == PLUS_TIMER) {
-        grid->showPlus();
-        return 0;
-    }
 
     if (message == WM_LBUTTONDOWN) {
         grid->finishEdit(true, 0, 0, false);
@@ -110,13 +97,6 @@ LRESULT CALLBACK gridProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
     if (message == WM_CONTEXTMENU) {
         grid->showContextMenu(lParam);
         return 0;
-    }
-
-    if (message == WM_CTLCOLOREDIT) {
-        HDC canvas = (HDC)wParam;
-        gdi.SetTextColor(canvas, colors.ink);
-        gdi.SetBkColor(canvas, colors.card);
-        return (LRESULT)inputBrush;
     }
 
     return CallWindowProcW(grid->oldProc, hwnd, message, wParam, lParam);

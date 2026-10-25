@@ -5,4 +5,3 @@
 using namespace std;
 
 const string LAB_TITLE = "Лабораторная работа №2";
-const string LAB_SUBTITLE = "Двухпросмотровый ассемблер · перемещаемый формат";

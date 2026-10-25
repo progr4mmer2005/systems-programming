@@ -5,10 +5,10 @@
 void Grid::create(HWND parent, int gridId, HFONT gridFont) {
     id = gridId;
     font = gridFont;
-    hwnd = CreateWindowExW(0, WC_LISTVIEWW, L"",
+    hwnd = CreateWindowExW(WS_EX_CLIENTEDGE, WC_LISTVIEWW, L"",
                            WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_CLIPCHILDREN | LVS_REPORT | LVS_OWNERDATA | LVS_SINGLESEL | LVS_SHOWSELALWAYS,
                            0, 0, 10, 10, parent, (HMENU)(INT_PTR)gridId, GetModuleHandleW(NULL), NULL);
-    int style = LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER | LVS_EX_LABELTIP;
+    int style = LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER | LVS_EX_LABELTIP | LVS_EX_GRIDLINES;
     if (showTooltips) style = style | LVS_EX_INFOTIP;
     ListView_SetExtendedListViewStyle(hwnd, style);
     SendMessageW(hwnd, WM_SETFONT, (WPARAM)font, TRUE);
@@ -17,9 +17,11 @@ void Grid::create(HWND parent, int gridId, HFONT gridFont) {
     ListView_SetImageList(hwnd, comctl.ImageList_Create(1, S(24), ILC_COLOR32, 1, 1), LVSIL_SMALL);
 
     for (int i = 0; i < viewColumnCount(); i++) {
+        wstring caption = toWide(i < numberColumns() ? "№" : headers[i - numberColumns()]);
         LVCOLUMNW column = {};
-        column.mask = LVCF_WIDTH;
+        column.mask = LVCF_WIDTH | LVCF_TEXT;
         column.cx = S(80);
+        column.pszText = (LPWSTR)caption.c_str();
         ListView_InsertColumn(hwnd, i, &column);
     }
 
@@ -30,10 +32,9 @@ void Grid::create(HWND parent, int gridId, HFONT gridFont) {
 }
 
 void Grid::applyTheme() {
-    ListView_SetBkColor(hwnd, colors.card);
-    ListView_SetTextBkColor(hwnd, colors.card);
+    ListView_SetBkColor(hwnd, colors.field);
+    ListView_SetTextBkColor(hwnd, colors.field);
     ListView_SetTextColor(hwnd, colors.ink);
-    applyControlTheme(hwnd, L"DarkMode_Explorer");
     InvalidateRect(hwnd, NULL, TRUE);
 }
 
@@ -61,7 +62,6 @@ void Grid::addEmptyRowIfNeeded() {
 }
 
 void Grid::refresh() {
-    hidePlus();
     fitColumns();
     ListView_SetItemCountEx(hwnd, rowCount(), editable ? LVSICF_NOSCROLL : 0);
     fitColumns();
@@ -79,41 +79,27 @@ int Grid::longestText(int col) {
 
 void Grid::fitColumns() {
     if (!hwnd) return;
-    RECT box, header;
-    GetWindowRect(hwnd, &box);
-    GetWindowRect(ListView_GetHeader(hwnd), &header);
-    int height = box.bottom - box.top - (header.bottom - header.top);
-
-    RECT firstRow;
-    if (ListView_GetItemCount(hwnd) > 0 && ListView_GetItemRect(hwnd, 0, &firstRow, LVIR_BOUNDS))
-        rowHeight = firstRow.bottom - firstRow.top;
-    int oneRow = rowHeight > 0 ? rowHeight : S(24);
+    RECT client;
+    GetClientRect(hwnd, &client);
+    int width = client.right;
+    bool scrollShown = (GetWindowLongW(hwnd, GWL_STYLE) & WS_VSCROLL) != 0;
+    bool scrollNeeded = rowCount() > ListView_GetCountPerPage(hwnd);
+    if (scrollShown && !scrollNeeded) width += GetSystemMetrics(SM_CXVSCROLL);
+    if (!scrollShown && scrollNeeded) width -= GetSystemMetrics(SM_CXVSCROLL);
+    width -= 1;
+    if (showRowNumbers) width -= S(NUMBER_COLUMN_WIDTH);
 
     int total = 0;
     for (int w : widths) total += w;
-    int lastNeed = fitText ? longestText(columnCount() - 1) : 0;
-    bool wide = false;
     vector<int> columns;
-    for (int attempt = 0; attempt < 2; attempt++) {
-        int width = box.right - box.left;
-        int listHeight = height - (wide ? GetSystemMetrics(SM_CYHSCROLL) : 0);
-        if (rowCount() * oneRow > listHeight) width -= GetSystemMetrics(SM_CXVSCROLL);
-        width -= 1;
-        if (showRowNumbers) width -= S(NUMBER_COLUMN_WIDTH);
-
-        columns.clear();
-        int used = 0;
-        for (int i = 0; i < columnCount(); i++) {
-            int columnWidth = width * widths[i] / total;
-            if (i == columnCount() - 1) columnWidth = width - used;
-            columns.push_back(max(columnWidth, S(20)));
-            used += columnWidth;
-        }
-        bool needWide = lastNeed > columns.back();
-        if (needWide == wide) break;
-        wide = needWide;
+    int used = 0;
+    for (int i = 0; i < columnCount(); i++) {
+        int columnWidth = width * widths[i] / total;
+        if (i == columnCount() - 1) columnWidth = width - used;
+        columns.push_back(max(columnWidth, S(20)));
+        used += columnWidth;
     }
-    if (wide) columns.back() = lastNeed;
+    if (fitText) columns.back() = max(columns.back(), longestText(columnCount() - 1));
 
     if (showRowNumbers) ListView_SetColumnWidth(hwnd, 0, S(NUMBER_COLUMN_WIDTH));
     for (int i = 0; i < columnCount(); i++) ListView_SetColumnWidth(hwnd, i + numberColumns(), columns[i]);

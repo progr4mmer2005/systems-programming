@@ -49,7 +49,7 @@ void layoutTextEditor() {
     RECT area;
     GetClientRect(textEditorWindow, &area);
     int pad = S(16);
-    int buttonWidth = S(120), buttonHeight = S(34);
+    int buttonWidth = S(100), buttonHeight = S(28);
     int bottom = area.bottom - pad - buttonHeight;
     int gutterWidth = S(46);
     int top = pad + S(40) + 1, height = bottom - pad - (pad + S(40)) - 2;
@@ -79,7 +79,7 @@ void drawLineNumbers(HDC canvas) {
     HGDIOBJ oldPicture = gdi.SelectObject(memory, picture);
 
     RECT box = {0, 0, width, height};
-    fill(memory, box, colors.header);
+    fill(memory, box, colors.numberColumn);
     RECT separator = {width - 1, 0, width, height};
     fill(memory, separator, colors.border);
 
@@ -125,7 +125,7 @@ void paintTextEditor(HWND window) {
 
     int pad = S(16);
     RECT hint = {pad, pad, area.right - pad, pad + S(36)};
-    drawText(canvas, textEditorHint, hint, fonts.hint, colors.muted, DT_LEFT | DT_TOP | DT_WORDBREAK);
+    drawText(canvas, textEditorHint, hint, fonts.normal, colors.ink, DT_LEFT | DT_TOP | DT_WORDBREAK);
 
     RECT border;
     GetWindowRect(textEditorBox, &border);
@@ -152,15 +152,6 @@ LRESULT CALLBACK textEditorProc(HWND window, UINT message, WPARAM wParam, LPARAM
     if (message == WM_PAINT) {
         paintTextEditor(window);
         return 0;
-    }
-    if (message == WM_DRAWITEM) {
-        drawButton((DRAWITEMSTRUCT*)lParam);
-        return TRUE;
-    }
-    if (message == WM_CTLCOLOREDIT) {
-        gdi.SetTextColor((HDC)wParam, colors.ink);
-        gdi.SetBkColor((HDC)wParam, colors.card);
-        return (LRESULT)inputBrush;
     }
     if (message == WM_COMMAND) {
         if (LOWORD(wParam) == ID_EDITOR_OK) closeTextEditor(true);
@@ -244,7 +235,6 @@ TextEditorResult openTextEditor(HWND owner, string title, string hint, string te
     textEditorWindow = CreateWindowExW(WS_EX_DLGMODALFRAME, L"AsmTextEditor", toWide(title).c_str(),
                                        WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_CLIPCHILDREN, x, y, width,
                                        height, owner, NULL, GetModuleHandleW(NULL), NULL);
-    applyTitleBarTheme(textEditorWindow);
 
     textEditorBox = CreateWindowExW(0, L"EDIT", L"",
                                     WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL | WS_HSCROLL | ES_MULTILINE |
@@ -253,12 +243,11 @@ TextEditorResult openTextEditor(HWND owner, string title, string hint, string te
     SendMessageW(textEditorBox, WM_SETFONT, (WPARAM)fonts.mono, TRUE);
     SendMessageW(textEditorBox, EM_SETLIMITTEXT, 0, 0);
     SendMessageW(textEditorBox, EM_SETMARGINS, EC_LEFTMARGIN | EC_RIGHTMARGIN, MAKELPARAM(S(6), S(6)));
-    applyControlTheme(textEditorBox, L"DarkMode_Explorer");
     setWindowText(textEditorBox, withWindowsNewlines(text));
     textEditorBoxOldProc = (WNDPROC)SetWindowLongPtrW(textEditorBox, GWLP_WNDPROC, (LONG_PTR)textEditorBoxProc);
 
-    textEditorOk = makeButton(textEditorWindow, ID_EDITOR_OK, "Применить", BUTTON_PRIMARY);
-    textEditorCancel = makeButton(textEditorWindow, ID_EDITOR_CANCEL, "Отмена", BUTTON_SECONDARY);
+    textEditorOk = makeButton(textEditorWindow, ID_EDITOR_OK, "Применить");
+    textEditorCancel = makeButton(textEditorWindow, ID_EDITOR_CANCEL, "Отмена");
 
     layoutTextEditor();
     EnableWindow(owner, FALSE);
@@ -280,9 +269,6 @@ TextEditorResult openTextEditor(HWND owner, string title, string hint, string te
 
     EnableWindow(owner, TRUE);
     DestroyWindow(textEditorWindow);
-    for (int i = len(buttons) - 1; i >= 0; i--) {
-        if (buttons[i].hwnd == textEditorOk || buttons[i].hwnd == textEditorCancel) buttons.erase(buttons.begin() + i);
-    }
     textEditorWindow = NULL;
     textEditorBox = NULL;
     SetForegroundWindow(owner);
