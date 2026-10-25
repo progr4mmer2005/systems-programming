@@ -1,4 +1,3 @@
-// Таблица кодов операций (ТКО): проверка и поиск команды.
 #pragma once
 
 #include <string>
@@ -12,13 +11,12 @@ using namespace std;
 #include "names.h"
 
 struct OpCode {
-    string name;  // мнемоника, большими буквами
-    int code;     // 00..3F
-    int length;   // длина в байтах = формат команды, 1..4
-    int row;      // строка в таблице ТКО
+    string name;
+    int code;
+    int length;
+    int row;
 };
 
-// Номер команды в списке или -1, если такой нет.
 int findOp(vector<OpCode> ops, string name) {
     for (int i = 0; i < len(ops); i++) {
         if (sameName(ops[i].name, name)) return i;
@@ -26,11 +24,10 @@ int findOp(vector<OpCode> ops, string name) {
     return -1;
 }
 
-// Проверить одну строку ТКО. "" - всё хорошо, иначе текст ошибки.
 string checkOpRow(string name, string codeText, string lengthText, vector<OpCode> ops) {
     if (name == "" || codeText == "" || lengthText == "") return "Заполнены не все ячейки: нужны мнемоника, код и длина";
     if (!isName(name)) return "Мнемоника «" + name + "»: только латинские буквы, цифры и «_», первая — буква";
-    if (len(name) > MAX_NAME_LENGTH) return "Мнемоника «" + name + "» длиннее " + to_string(MAX_NAME_LENGTH) + " символов";
+    if (len(name) > MAX_MNEMONIC_LENGTH) return "Мнемоника «" + name + "» длиннее " + to_string(MAX_MNEMONIC_LENGTH) + " символов";
     if (isDirective(name)) return "Мнемоника «" + name + "» совпадает с директивой";
     if (isRegister(name)) return "Мнемоника «" + name + "» совпадает с именем регистра";
 
@@ -49,7 +46,6 @@ string checkOpRow(string name, string codeText, string lengthText, vector<OpCode
     return "";
 }
 
-// Прочитать ТКО из таблицы окна: вернуть правильные команды, ошибки дописать в errors.
 vector<OpCode> readOpTable(Table table, vector<Error>& errors) {
     vector<OpCode> ops;
     for (int row = 0; row < len(table); row++) {

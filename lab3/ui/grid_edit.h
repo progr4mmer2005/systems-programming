@@ -1,14 +1,7 @@
-// Grid: редактирование ячейки и меню по правому клику.
-//
-// Чтобы изменить ячейку, поверх неё ставится обычное поле ввода (editor).
-// Enter - сохранить, Esc - отменить.
 #pragma once
 
 #include "grid.h"
 
-// Открыть поле ввода над текущей ячейкой.
-// typed - первая нажатая буква, если пользователь сразу начал печатать;
-// пусто - тогда в поле будет текущий текст ячейки.
 void Grid::beginEdit(wstring typed) {
     if (!editable || rowCount() == 0 || currentRow < 0) return;
     ListView_EnsureVisible(hwnd, currentRow, FALSE);
@@ -24,18 +17,14 @@ void Grid::beginEdit(wstring typed) {
     oldEditorProc = (WNDPROC)SetWindowLongPtrW(editor, GWLP_WNDPROC, (LONG_PTR)cellEditorProc);
     SetFocus(editor);
     if (typed != L"")
-        SendMessageW(editor, EM_SETSEL, text.size(), text.size());  // курсор в конец
+        SendMessageW(editor, EM_SETSEL, text.size(), text.size());
     else
-        SendMessageW(editor, EM_SETSEL, 0, -1);  // выделить весь текст
+        SendMessageW(editor, EM_SETSEL, 0, -1);
 }
 
-// Закрыть поле ввода.
-//   save - сохранить текст в ячейку;
-//   moveRows, moveCols - куда потом сдвинуться (Enter - на строку ниже, Tab - вправо);
-//   focusGrid - вернуть фокус таблице.
 void Grid::finishEdit(bool save, int moveRows, int moveCols, bool focusGrid) {
     if (editor == NULL || finishingEdit) return;
-    finishingEdit = true;  // закрытие поля вызывает finishEdit повторно
+    finishingEdit = true;
     string text = trim(windowText(editor));
     HWND closing = editor;
     editor = NULL;
@@ -52,7 +41,6 @@ void Grid::finishEdit(bool save, int moveRows, int moveCols, bool focusGrid) {
     finishingEdit = false;
 }
 
-// Шаг влево/вправо; с края строки - на предыдущую/следующую строку.
 void Grid::moveColumn(int delta) {
     currentCol += delta;
     if (currentCol < 0) {
@@ -74,17 +62,15 @@ void Grid::moveColumn(int delta) {
     select(currentRow, currentCol);
 }
 
-// Меню по правому клику: вставить / удалить строку, изменить / очистить ячейку.
 void Grid::showContextMenu(LPARAM lParam) {
     if (!editable) return;
     POINT point = {mouseX(lParam), mouseY(lParam)};
-    bool fromKeyboard = point.x == -1 && point.y == -1;  // клавиша "меню" на клавиатуре
+    bool fromKeyboard = point.x == -1 && point.y == -1;
     if (fromKeyboard) {
         RECT box = cellBox(currentRow, currentCol);
         point = {box.left + S(8), box.bottom};
         ClientToScreen(hwnd, &point);
     } else {
-        // Выделить ячейку, по которой щёлкнули.
         LVHITTESTINFO hit = {};
         hit.pt = point;
         ScreenToClient(hwnd, &hit.pt);

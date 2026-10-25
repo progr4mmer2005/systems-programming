@@ -1,5 +1,3 @@
-// Окно "Редактировать как текст": большое поле ввода с номерами строк слева
-// и кнопки "Применить" / "Отмена". Пока оно открыто, главное окно недоступно.
 #pragma once
 
 #include <string>
@@ -17,8 +15,8 @@ const int ID_EDITOR_OK = 300;
 const int ID_EDITOR_CANCEL = 301;
 
 struct TextEditorResult {
-    bool ok;      // нажали "Применить"
-    string text;  // текст из поля
+    bool ok;
+    string text;
 };
 
 HWND textEditorWindow = NULL;
@@ -30,15 +28,11 @@ string textEditorHint;
 bool textEditorClosed = false;
 bool textEditorAccepted = false;
 
-// Колонка с номерами строк слева от поля ввода.
 RECT textEditorGutter;
 int textEditorLineHeight = 0;
-int shownFirstLine = -1, shownLineCount = -1, shownCaretLine = -1;  // что сейчас нарисовано
-bool askingEditor = false;  // идёт наш собственный запрос к полю ввода
+int shownFirstLine = -1, shownLineCount = -1, shownCaretLine = -1;
+bool askingEditor = false;
 
-// Спросить у поля ввода номер строки. Запрос - тоже сообщение полю, он проходит через
-// textEditorBoxProc, поэтому на время запроса номера строк там не обновляем, иначе
-// запрос вызывал бы сам себя без конца.
 int askEditor(UINT message, WPARAM wParam, LPARAM lParam) {
     askingEditor = true;
     int answer = (int)SendMessageW(textEditorBox, message, wParam, lParam);
@@ -51,12 +45,11 @@ void closeTextEditor(bool accept) {
     textEditorClosed = true;
 }
 
-// Расположение: подсказка сверху, поле ввода, кнопки снизу справа.
 void layoutTextEditor() {
     RECT area;
     GetClientRect(textEditorWindow, &area);
     int pad = S(16);
-    int buttonWidth = S(120), buttonHeight = S(34);
+    int buttonWidth = S(100), buttonHeight = S(28);
     int bottom = area.bottom - pad - buttonHeight;
     int gutterWidth = S(46);
     int top = pad + S(40) + 1, height = bottom - pad - (pad + S(40)) - 2;
@@ -67,7 +60,6 @@ void layoutTextEditor() {
     InvalidateRect(textEditorWindow, NULL, FALSE);
 }
 
-// Высота строки в поле ввода - высота строки шрифта.
 int measureLineHeight(HFONT font) {
     HDC screen = GetDC(NULL);
     HGDIOBJ oldFont = gdi.SelectObject(screen, font);
@@ -78,8 +70,6 @@ int measureLineHeight(HFONT font) {
     return box.bottom - box.top;
 }
 
-// Номера видимых строк, как в редакторе кода. Номер строки с курсором - синий.
-// Рисуем в памяти и копируем целиком, чтобы номера не мерцали при прокрутке.
 void drawLineNumbers(HDC canvas) {
     RECT gutter = textEditorGutter;
     int width = gutter.right - gutter.left, height = gutter.bottom - gutter.top;
@@ -89,16 +79,16 @@ void drawLineNumbers(HDC canvas) {
     HGDIOBJ oldPicture = gdi.SelectObject(memory, picture);
 
     RECT box = {0, 0, width, height};
-    fill(memory, box, colors.header);
+    fill(memory, box, colors.numberColumn);
     RECT separator = {width - 1, 0, width, height};
     fill(memory, separator, colors.border);
 
     int first = askEditor(EM_GETFIRSTVISIBLELINE, 0, 0);
     int count = askEditor(EM_GETLINECOUNT, 0, 0);
     int caret = askEditor(EM_LINEFROMCHAR, (WPARAM)-1, 0);
-    RECT text;  // где в поле ввода начинается текст
+    RECT text;
     askEditor(EM_GETRECT, 0, (LPARAM)&text);
-    RECT client;  // высота текста без горизонтальной полосы прокрутки
+    RECT client;
     GetClientRect(textEditorBox, &client);
     int bottom = min((int)client.bottom, height);
     int y = text.top;
@@ -118,7 +108,6 @@ void drawLineNumbers(HDC canvas) {
     shownCaretLine = caret;
 }
 
-// Текст прокрутили, добавили строку или передвинули курсор - перерисовать номера.
 void refreshLineNumbers() {
     int first = askEditor(EM_GETFIRSTVISIBLELINE, 0, 0);
     int count = askEditor(EM_GETLINECOUNT, 0, 0);
@@ -136,9 +125,9 @@ void paintTextEditor(HWND window) {
 
     int pad = S(16);
     RECT hint = {pad, pad, area.right - pad, pad + S(36)};
-    drawText(canvas, textEditorHint, hint, fonts.hint, colors.muted, DT_LEFT | DT_TOP | DT_WORDBREAK);
+    drawText(canvas, textEditorHint, hint, fonts.normal, colors.ink, DT_LEFT | DT_TOP | DT_WORDBREAK);
 
-    RECT border;  // рамка вокруг номеров строк и поля ввода
+    RECT border;
     GetWindowRect(textEditorBox, &border);
     MapWindowPoints(NULL, window, (POINT*)&border, 2);
     border.left = textEditorGutter.left;
@@ -164,15 +153,6 @@ LRESULT CALLBACK textEditorProc(HWND window, UINT message, WPARAM wParam, LPARAM
         paintTextEditor(window);
         return 0;
     }
-    if (message == WM_DRAWITEM) {
-        drawButton((DRAWITEMSTRUCT*)lParam);
-        return TRUE;
-    }
-    if (message == WM_CTLCOLOREDIT) {
-        gdi.SetTextColor((HDC)wParam, colors.ink);
-        gdi.SetBkColor((HDC)wParam, colors.card);
-        return (LRESULT)inputBrush;
-    }
     if (message == WM_COMMAND) {
         if (LOWORD(wParam) == ID_EDITOR_OK) closeTextEditor(true);
         if (LOWORD(wParam) == ID_EDITOR_CANCEL) closeTextEditor(false);
@@ -185,7 +165,6 @@ LRESULT CALLBACK textEditorProc(HWND window, UINT message, WPARAM wParam, LPARAM
     return DefWindowProcW(window, message, wParam, lParam);
 }
 
-// Клавиши в поле ввода: Ctrl+A - выделить всё, Ctrl+Enter - применить, Esc - отмена.
 LRESULT handleTextEditorBox(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
     bool ctrl = GetKeyState(VK_CONTROL) < 0;
     if (message == WM_KEYDOWN) {
@@ -202,20 +181,16 @@ LRESULT handleTextEditorBox(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
             return 0;
         }
     }
-    // Символы, которые дают эти сочетания клавиш, в текст не вставляем.
     if (message == WM_CHAR && (wParam == 1 || wParam == 10 || wParam == 27)) return 0;
     return CallWindowProcW(textEditorBoxOldProc, hwnd, message, wParam, lParam);
 }
 
-// Обработчик поля ввода: после любого сообщения проверяем, не пора ли перерисовать номера строк
-// (прокрутка колесом и полосой, ввод текста, стрелки, щелчок мышью).
 LRESULT CALLBACK textEditorBoxProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
     LRESULT result = handleTextEditorBox(hwnd, message, wParam, lParam);
     if (!askingEditor && message != WM_DESTROY && message != WM_NCDESTROY && hwnd == textEditorBox) refreshLineNumbers();
     return result;
 }
 
-// Windows в поле ввода хочет переводы строк "\r\n".
 string withWindowsNewlines(string text) {
     string result;
     for (char c : text) {
@@ -252,7 +227,6 @@ TextEditorResult openTextEditor(HWND owner, string title, string hint, string te
     textEditorLineHeight = measureLineHeight(fonts.mono);
     shownFirstLine = shownLineCount = shownCaretLine = -1;
 
-    // Окно по центру главного окна.
     RECT ownerBox;
     GetWindowRect(owner, &ownerBox);
     int width = S(760), height = S(620);
@@ -261,7 +235,6 @@ TextEditorResult openTextEditor(HWND owner, string title, string hint, string te
     textEditorWindow = CreateWindowExW(WS_EX_DLGMODALFRAME, L"AsmTextEditor", toWide(title).c_str(),
                                        WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_CLIPCHILDREN, x, y, width,
                                        height, owner, NULL, GetModuleHandleW(NULL), NULL);
-    applyTitleBarTheme(textEditorWindow);
 
     textEditorBox = CreateWindowExW(0, L"EDIT", L"",
                                     WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL | WS_HSCROLL | ES_MULTILINE |
@@ -270,24 +243,22 @@ TextEditorResult openTextEditor(HWND owner, string title, string hint, string te
     SendMessageW(textEditorBox, WM_SETFONT, (WPARAM)fonts.mono, TRUE);
     SendMessageW(textEditorBox, EM_SETLIMITTEXT, 0, 0);
     SendMessageW(textEditorBox, EM_SETMARGINS, EC_LEFTMARGIN | EC_RIGHTMARGIN, MAKELPARAM(S(6), S(6)));
-    applyControlTheme(textEditorBox, L"DarkMode_Explorer");
     setWindowText(textEditorBox, withWindowsNewlines(text));
     textEditorBoxOldProc = (WNDPROC)SetWindowLongPtrW(textEditorBox, GWLP_WNDPROC, (LONG_PTR)textEditorBoxProc);
 
-    textEditorOk = makeButton(textEditorWindow, ID_EDITOR_OK, "Применить", BUTTON_PRIMARY);
-    textEditorCancel = makeButton(textEditorWindow, ID_EDITOR_CANCEL, "Отмена", BUTTON_SECONDARY);
+    textEditorOk = makeButton(textEditorWindow, ID_EDITOR_OK, "Применить");
+    textEditorCancel = makeButton(textEditorWindow, ID_EDITOR_CANCEL, "Отмена");
 
     layoutTextEditor();
     EnableWindow(owner, FALSE);
     ShowWindow(textEditorWindow, SW_SHOW);
     SetFocus(textEditorBox);
 
-    // Свой цикл сообщений, пока окно не закроют.
     MSG message;
     while (!textEditorClosed) {
         int got = GetMessageW(&message, NULL, 0, 0);
         if (got <= 0) {
-            PostQuitMessage((int)message.wParam);  // программу закрывают - вернуть сообщение главному циклу
+            PostQuitMessage((int)message.wParam);
             break;
         }
         TranslateMessage(&message);
@@ -296,12 +267,8 @@ TextEditorResult openTextEditor(HWND owner, string title, string hint, string te
 
     TextEditorResult result = {textEditorAccepted, withoutCarriageReturns(windowText(textEditorBox))};
 
-    // Сначала включить главное окно, иначе после закрытия фокус уйдёт в другую программу.
     EnableWindow(owner, TRUE);
     DestroyWindow(textEditorWindow);
-    for (int i = len(buttons) - 1; i >= 0; i--) {
-        if (buttons[i].hwnd == textEditorOk || buttons[i].hwnd == textEditorCancel) buttons.erase(buttons.begin() + i);
-    }
     textEditorWindow = NULL;
     textEditorBox = NULL;
     SetForegroundWindow(owner);

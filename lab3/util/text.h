@@ -1,4 +1,3 @@
-// Работа со строками и числами.
 #pragma once
 
 #include <string>
@@ -6,13 +5,11 @@
 
 using namespace std;
 
-// Длина строки или списка.
 int len(string s) { return (int)s.size(); }
 
 template <typename T>
 int len(vector<T> list) { return (int)list.size(); }
 
-// "  LD " -> "LD"
 string trim(string s) {
     int start = 0;
     int end = len(s);
@@ -21,14 +18,12 @@ string trim(string s) {
     return s.substr(start, end - start);
 }
 
-// "  LD " -> "  LD"
 string trimRight(string s) {
     int end = len(s);
     while (end > 0 && (s[end - 1] == ' ' || s[end - 1] == '\t')) end--;
     return s.substr(0, end);
 }
 
-// "ld" -> "LD" (только латиница)
 string upper(string s) {
     for (int i = 0; i < len(s); i++) {
         if (s[i] >= 'a' && s[i] <= 'z') s[i] = s[i] - 'a' + 'A';
@@ -36,10 +31,8 @@ string upper(string s) {
     return s;
 }
 
-// Имена сравниваются без учёта регистра: "Loop" и "LOOP" - одно и то же.
 bool sameName(string a, string b) { return upper(a) == upper(b); }
 
-// Число в hex-строку из digits цифр: hex(26, 4) = "001A"
 string hex(long long value, int digits) {
     string symbols = "0123456789ABCDEF";
     string result = "";
@@ -50,13 +43,11 @@ string hex(long long value, int digits) {
     return result;
 }
 
-// Результат разбора числа: ok - удалось ли разобрать, value - число.
 struct Number {
     bool ok;
     long long value;
 };
 
-// "1A" -> 26. Цифр - от 1 до maxDigits.
 Number parseHex(string s, int maxDigits) {
     Number result = {false, 0};
     if (s == "" || len(s) > maxDigits) return result;
@@ -70,7 +61,6 @@ Number parseHex(string s, int maxDigits) {
     return result;
 }
 
-// "-12" -> -12. Не больше 12 цифр.
 Number parseDecimal(string s) {
     Number result = {false, 0};
     bool negative = false;
@@ -88,7 +78,6 @@ Number parseDecimal(string s) {
     return result;
 }
 
-// Слово после числа: 1 ошибка, 2 ошибки, 5 ошибок.
 string plural(long long n, string one, string few, string many) {
     long long last = n % 10, lastTwo = n % 100;
     if (last == 1 && lastTwo != 11) return one;
@@ -96,12 +85,10 @@ string plural(long long n, string one, string few, string many) {
     return many;
 }
 
-// countText(3, "ошибка", "ошибки", "ошибок") = "3 ошибки"
 string countText(long long n, string one, string few, string many) {
     return to_string(n) + " " + plural(n, one, few, many);
 }
 
-// Заменить первое вхождение what на with.
 string replaceFirst(string s, string what, string with) {
     size_t at = s.find(what);
     if (at == string::npos) return s;

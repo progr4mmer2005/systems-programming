@@ -1,5 +1,3 @@
-// Подготовка при запуске: современный вид окон, чёткость на экранах
-// с масштабом, скрытие лишнего консольного окна.
 #pragma once
 
 #include <string>
@@ -8,9 +6,6 @@ using namespace std;
 
 #include "winapi.h"
 
-// Новый вид таблиц и кнопок (Common Controls 6.0) включается манифестом.
-// Обычно его добавляют в exe через ресурсы. Чтобы собирать одной командой,
-// манифест пишется во временный файл и подключается при запуске.
 void enableModernControls() {
     wchar_t folder[MAX_PATH];
     GetTempPathW(MAX_PATH, folder);
@@ -36,16 +31,12 @@ void enableModernControls() {
     ActivateActCtx(handle, &cookie);
 }
 
-// Без этого при масштабе 125-150% Windows растягивает окно и текст размыт.
-// SetProcessDPIAware нет в заголовках старого MinGW, поэтому берётся из user32.dll.
 void enableSharpText() {
     typedef BOOL(WINAPI * Function)();
     Function setDpiAware = (Function)GetProcAddress(GetModuleHandleW(L"user32.dll"), "SetProcessDPIAware");
     if (setDpiAware) setDpiAware();
 }
 
-// При запуске двойным кликом открывается консольное окно, его нужно скрыть.
-// При запуске из терминала консоль общая, её не трогаем.
 void hideConsoleWindow() {
     DWORD processes[4];
     if (GetConsoleWindow() && GetConsoleProcessList(processes, 4) == 1) FreeConsole();

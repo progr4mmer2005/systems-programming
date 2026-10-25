@@ -1,42 +1,34 @@
-// Что делают кнопки и поля окна: проходы, примеры, адрес загрузки, тема.
 #pragma once
 
 #include "../asm/first_pass.h"
 #include "../asm/second_pass.h"
-#include "../asm/object_module.h"
-#include "../platform/settings.h"
 #include "state.h"
 
-void setStatus(string text, COLORREF color) {
-    statusText = text;
-    statusColor = color;
-    InvalidateRect(mainWindow, &statusBox, FALSE);
-}
+void setStatus(string text) { SendMessageW(statusBar, SB_SETTEXTW, 0, (LPARAM)toWide(text).c_str()); }
 
 void redrawWindow() { InvalidateRect(mainWindow, NULL, FALSE); }
 
-// Стереть результаты - при любом изменении входных данных.
 void clearResults() {
     pass1 = Pass1Result();
     pass2 = Pass2Result();
     pass1Done = false;
-    step1 = STEP_WAITING;
-    step2 = STEP_WAITING;
     badSourceRows.clear();
     badOpsRows.clear();
     errors1Grid.placeholder = "Появится после первого прохода";
     errors2Grid.placeholder = "Появится после второго прохода";
-    relocGrid.placeholder = "После 2-го прохода";
+    headerGrid.placeholder = "Появится после второго прохода";
+    relocGrid.placeholder = "Появится после второго прохода";
     extNamesGrid.placeholder = "После 2-го прохода";
     extRefsGrid.placeholder = "После 2-го прохода";
     supportGrid.clear();
     symbolsGrid.clear();
     errors1Grid.clear();
-    headerGrid.clear();
     relocGrid.clear();
     extNamesGrid.clear();
     extRefsGrid.clear();
+    moduleRecords.clear();
     EnableWindow(saveButton, FALSE);
+    headerGrid.clear();
     codeGrid.clear();
     errors2Grid.clear();
     EnableWindow(pass2Button, FALSE);
@@ -45,7 +37,6 @@ void clearResults() {
     redrawWindow();
 }
 
-// Отметить строки исходного текста и ТКО, в которых нашлись ошибки.
 void markBadRows(vector<Error> errors) {
     badSourceRows = vector<bool>(sourceGrid.rowCount(), false);
     badOpsRows = vector<bool>(opsGrid.rowCount(), false);
@@ -57,14 +48,12 @@ void markBadRows(vector<Error> errors) {
     InvalidateRect(opsGrid.hwnd, NULL, FALSE);
 }
 
-// Ошибки -> строки таблицы "Где | Сообщение".
 Table errorsTable(vector<Error> errors) {
     Table table;
     for (Error error : errors) table.push_back({placeText(error), error.text});
     return table;
 }
 
-// Щелчок по ошибке - выделить строку, где она найдена.
 void showErrorRow(vector<Error> errors, int index) {
     if (index < 0 || index >= len(errors)) return;
     Error error = errors[index];
@@ -72,37 +61,8 @@ void showErrorRow(vector<Error> errors, int index) {
     if (error.place == "ops") opsGrid.select(error.row, 0);
 }
 
-// ---- адрес загрузки: поле ввода и операнд Start - одно и то же значение ----
-
-// Номер строки со Start (первая непустая строка) или -1.
-int startRow() {
-    for (int row = 0; row < sourceGrid.rowCount(); row++) {
-        if (isEmptyRow(sourceGrid.rows[row])) continue;
-        if (sameName(cell(sourceGrid.rows[row], 1), "START")) return row;
-        return -1;
-    }
-    return -1;
-}
-
-// Исходный текст изменился -> показать адрес из Start в поле ввода.
-void showAddressFromSource() {
-    int row = startRow();
-    string address = row >= 0 ? sourceGrid.rows[row][2] : "";
-    if (windowText(addressEdit) != address) {
-        updatingAddress = true;
-        setWindowText(addressEdit, address);
-        updatingAddress = false;
-    }
-    EnableWindow(addressEdit, row >= 0);
-}
-
-// ---- проходы ----
-
-// Строка вспомогательной таблицы: адрес | МКОП | операнд 1 | операнд 2.
-// МКОП команды - её первый байт, уже собранный из битов: код операции * 4 + тип
-// адресации (LD с прямой адресацией: 01 * 4 + 1 = 05). У данных - WORD / BYTE.
-// Операнды - как в исходном тексте, метки в них заменит адресами второй проход.
 Row supportTableRow(Line line) {
+    if (line.kind == "START") return {pass1.programName, "START", hexAddress(pass1.start), ""};
     string mkop = line.kind == "command" ? hex(line.firstByte, 2) : line.mnemonic;
     return {hexAddress(line.address), mkop, line.op1, line.op2};
 }
@@ -112,7 +72,7 @@ void showPass1() {
     opsGrid.commitEdit();
     clearResults();
 
-    pass1 = firstPass(sourceGrid.rows, opsGrid.rows);
+    pass1 = firstPass(sourceGrid.rows, opsGrid.rows, addressingMode);
     pass1Done = true;
 
     Table support, symbols;
@@ -125,33 +85,21 @@ void showPass1() {
     markBadRows(pass1.errors);
 
     if (pass1.ok) {
-        step1 = STEP_OK;
         EnableWindow(pass2Button, TRUE);
-        setStatus("Первый проход выполнен: " + countText(len(pass1.lines), "строка", "строки", "строк") + ", " +
+        int commands = len(pass1.lines) - 1;
+        setStatus("Первый проход выполнен: " + countText(commands, "строка", "строки", "строк") + ", " +
                       countText(len(pass1.symbols), "метка", "метки", "меток") + ", длина программы " +
-                      hexAddress(pass1.length) + ". Можно запускать второй проход.",
-                  colors.ok);
+                      hexAddress(pass1.length) + ". Можно запускать второй проход.");
     } else {
-        step1 = STEP_FAILED;
         setStatus("Первый проход: " + countText(len(pass1.errors), "ошибка", "ошибки", "ошибок") +
-                      ". Щёлкните по ошибке — строка подсветится в таблице.",
-                  colors.error);
+                      ". Щёлкните по ошибке — строка подсветится в таблице.");
     }
     redrawWindow();
 }
 
-// Двоичный код в виде записей объектного модуля:
-//   H - заголовок: адрес загрузки, длина, имя программы;
-//   T - строка кода: адрес, длина в байтах, код;
-//   E - конец модуля: точка входа (адрес загрузки).
 Table codeTable() {
     Table table;
-    table.push_back({"H", hexAddress(pass2.start), hexAddress(pass2.length), pass2.programName});
-    for (CodeLine line : pass2.code) {
-        string size = hex(line.size, line.size > 255 ? 4 : 2);
-        table.push_back({"T", hexAddress(line.address), size, line.code});
-    }
-    table.push_back({"E", hexAddress(pass2.start), "", ""});
+    for (ModuleRecord record : moduleRecords) table.push_back(record.cells);
     return table;
 }
 
@@ -159,15 +107,15 @@ void showPass2() {
     if (!pass1Done || !pass1.ok) return;
     pass2 = secondPass(pass1);
 
+    moduleRecords = objectModule(pass1, pass2);
     headerGrid.setRows({{pass2.programName, hexAddress(pass2.length), hexAddress(pass2.start)}});
     codeGrid.setRows(codeTable());
-    Table relocations;
+    Table relocations, names, refs;
     for (Relocation relocation : pass2.relocations) relocations.push_back({hexAddress(relocation.address), relocation.name});
-    relocGrid.placeholder = "Пусто";
-    relocGrid.setRows(relocations);
-    Table names, refs;
     for (Symbol name : pass2.externalNames) names.push_back({hexAddress(name.address), name.name});
     for (Symbol ref : pass2.externalRefs) refs.push_back({ref.name});
+    relocGrid.placeholder = "Пусто: настраивать нечего";
+    relocGrid.setRows(relocations);
     extNamesGrid.placeholder = "Пусто";
     extNamesGrid.setRows(names);
     extRefsGrid.placeholder = "Пусто";
@@ -175,22 +123,19 @@ void showPass2() {
     errors2Grid.placeholder = "Ошибок нет";
     errors2Grid.setRows(errorsTable(pass2.errors));
     markBadRows(pass2.errors);
-    EnableWindow(pass2Button, FALSE);  // по методичке после второго прохода кнопка снова неактивна
+    EnableWindow(pass2Button, FALSE);
 
     if (pass2.ok) {
-        step2 = STEP_OK;
         EnableWindow(saveButton, TRUE);
-        setStatus("Второй проход выполнен: объектный модуль готов, его можно сохранить в файл.", colors.ok);
+        setStatus("Второй проход выполнен: объектный модуль готов, в таблице настройки " +
+                      countText(len(pass2.relocations), "строка", "строки", "строк") + ". Его можно сохранить в файл.");
     } else {
-        step2 = STEP_FAILED;
         setStatus("Второй проход: " + countText(len(pass2.errors), "ошибка", "ошибки", "ошибок") +
-                      ". Исправьте исходный текст и повторите.",
-                  colors.error);
+                      ". Исправьте исходный текст и повторите.");
     }
     redrawWindow();
 }
 
-// Кнопки "Первый проход" и "Второй проход".
 void runPass1() {
     lastPass = 1;
     showPass1();
@@ -202,37 +147,26 @@ void runPass2() {
     showPass2();
 }
 
-// Данные изменились: заново выполнить проходы, до которых дошёл пользователь.
-// Если первый проход теперь с ошибками, второй не выполняется, но после
-// исправления ошибок выполнится снова.
 void recalculate() {
     if (lastPass == 0) {
         clearResults();
-        setStatus("Данные изменены. Нажмите «Первый проход».", colors.muted);
+        setStatus("Данные изменены. Нажмите «Первый проход».");
         return;
     }
     showPass1();
     if (lastPass == 2) showPass2();
 }
 
-// Кнопка "Очистить" и выбор другого примера.
 void resetResults() {
     lastPass = 0;
     clearResults();
 }
 
-// Пользователь что-то поменял в исходном тексте или ТКО.
-void onInputChanged() {
-    showAddressFromSource();
-    recalculate();
-}
+void onInputChanged() { recalculate(); }
 
-// Пользователь изменил поле адреса загрузки -> записать адрес в операнд Start.
-void onAddressEdited() {
-    int row = startRow();
-    if (updatingAddress || row < 0) return;
-    sourceGrid.rows[row][2] = trim(windowText(addressEdit));
-    sourceGrid.refresh();
+void onModeChanged(int mode) {
+    if (mode < MODE_BOTH || mode > MODE_RELATIVE) return;
+    addressingMode = mode;
     recalculate();
 }
 
@@ -241,15 +175,15 @@ void loadExample(int index) {
     Example example = examples[index];
     sourceGrid.setRows(example.source);
     opsGrid.setRows(example.ops);
+    addressingMode = example.mode;
+    SendMessageW(modeList, CB_SETCURSEL, addressingMode, 0);
     sourceGrid.select(0, 1);
     sourceGrid.scrollToTop();
     opsGrid.scrollToTop();
     resetResults();
-    showAddressFromSource();
-    setStatus("Загружен пример «" + example.title + "». Нажмите «Первый проход» (F5).", colors.muted);
+    setStatus("Загружен пример «" + example.title + "». Нажмите «Первый проход» (F5).");
 }
 
-// Кнопка "Сохранить...": записать объектный модуль в текстовый файл.
 void saveObjectModule() {
     if (!pass2.ok || !dialogs.GetSaveFileNameW) return;
     wstring defaultName = toWide(pass2.programName + ".txt");
@@ -264,49 +198,16 @@ void saveObjectModule() {
     dialog.nMaxFile = MAX_PATH;
     dialog.lpstrDefExt = L"txt";
     dialog.Flags = OFN_OVERWRITEPROMPT | OFN_PATHMUSTEXIST;
-    if (!dialogs.GetSaveFileNameW(&dialog)) return;  // нажали "Отмена"
+    if (!dialogs.GetSaveFileNameW(&dialog)) return;
 
     FILE* file = _wfopen(path.data(), L"wb");
     if (file == NULL) {
-        setStatus("Не удалось сохранить файл " + fromWide(path.data()), colors.error);
+        setStatus("Не удалось сохранить файл " + fromWide(path.data()));
         return;
     }
-    string text = withWindowsNewlines(objectModuleText(pass2));
+    string text = withWindowsNewlines(objectModuleText(moduleRecords));
     fwrite(text.data(), 1, text.size(), file);
     fclose(file);
-    setStatus("Объектный модуль сохранён в файл " + fromWide(path.data()), colors.ok);
+    setStatus("Объектный модуль сохранён в файл " + fromWide(path.data()));
 }
 
-// ---- тема: как в Windows, светлая, тёмная ----
-
-// Значок кнопки темы - символ из шрифта Segoe MDL2 Assets: монитор, солнце, луна.
-string themeIcon(int mode) {
-    if (mode == THEME_LIGHT) return "\uE706";
-    if (mode == THEME_DARK) return "\uE708";
-    return "\uE7F4";
-}
-
-string themeName(int mode) {
-    if (mode == THEME_LIGHT) return "светлая";
-    if (mode == THEME_DARK) return "тёмная";
-    return "как в Windows";
-}
-
-// Перекрасить окно в цвета текущего режима темы.
-void applyWindowTheme() {
-    setDarkTheme(isDarkMode(themeMode));
-    for (Grid* grid : allGrids) grid->applyTheme();
-    applyControlTheme(examplesList, L"DarkMode_CFD");
-    applyControlTheme(tooltip, L"DarkMode_Explorer");
-    applyTitleBarTheme(mainWindow);
-    setWindowText(themeButton, themeIcon(themeMode));
-    setTooltip(themeButton, "Тема: " + themeName(themeMode) + ". Щёлкните, чтобы сменить");
-    RedrawWindow(mainWindow, NULL, NULL, RDW_INVALIDATE | RDW_ERASE | RDW_FRAME | RDW_ALLCHILDREN);
-}
-
-// Кнопка темы: как в Windows -> светлая -> тёмная -> как в Windows.
-void nextTheme() {
-    themeMode = (themeMode + 1) % 3;
-    saveThemeMode(themeMode);
-    applyWindowTheme();
-}
