@@ -134,7 +134,7 @@ void showAssembly() {
         sourceGrid.select(assembly.lastRow, sourceGrid.currentCol);
         for (Grid* grid : {&symbolsGrid, &headerGrid, &relocGrid, &extNamesGrid, &extRefsGrid, &codeGrid}) {
             grid->unselect();
-            for (int row = grid->rowCount() - 1; row >= 0; row--) {
+            for (int row = 0; row < grid->rowCount(); row++) {
                 if (sourceRowOf(grid->id, row) != assembly.lastRow) continue;
                 grid->select(row, 0);
                 break;
