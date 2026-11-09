@@ -36,24 +36,37 @@ vector<Symbol> externalNames(Assembly& a) {
 
 vector<ModuleRecord> objectModule(Assembly& a) {
     vector<ModuleRecord> records;
-    if (a.startRow >= 0)
-        records.push_back({{"H", a.programName, hexAddress(a.start), a.ended ? hexAddress(a.length) : "", ""}, a.startRow});
-    for (Symbol name : externalNames(a)) {
-        ModuleRecord record = {{"D", name.name, name.defined ? hexAddress(name.address) : "", "", ""}, name.row};
-        record.waiting = !name.defined;
-        records.push_back(record);
+    vector<ModuleSection> sections = a.sections;
+    if (!a.ended && a.startRow >= 0) {
+        ModuleSection current;
+        current.name = a.programName; current.length = a.counter - a.start; current.entry = a.entry;
+        current.startRow = a.startRow; current.endRow = a.endRow; current.code = a.code;
+        current.symbols = a.symbols; current.extDefs = a.extDefs; current.extRefs = a.extRefs; current.relocations = a.relocations;
+        sections.push_back(current);
     }
-    for (Symbol ref : a.extRefs) records.push_back({{"R", ref.name, "", "", ""}, ref.row});
-    for (Relocation relocation : a.relocations)
-        records.push_back({{"M", relocation.name, hexAddress(relocation.address), "", ""}, relocation.row});
-    for (CodeLine line : a.code) {
-        ModuleRecord record = {{"T", "", hexAddress(line.address), hexLength(line.size), line.code}, line.row};
-        record.reserve = line.reserve;
-        record.waiting = line.waiting;
-        record.unresolved = line.unresolved;
-        records.push_back(record);
+    for (ModuleSection section : sections) {
+        records.push_back({{"H", section.name, "000000", hexAddress(section.length), ""}, section.startRow});
+        vector<Symbol> defs, waiting;
+        for (Symbol name : section.extDefs) {
+            int i = findSymbol(section.symbols, name.name);
+            if (i != -1 && section.symbols[i].defined) defs.push_back(section.symbols[i]);
+            else waiting.push_back(name);
+        }
+        stable_sort(defs.begin(), defs.end(), definedEarlier);
+        defs.insert(defs.end(), waiting.begin(), waiting.end());
+        for (Symbol name : defs) {
+            ModuleRecord record = {{"D", name.name, name.defined ? hexAddress(name.address) : "", "", ""}, name.row};
+            record.waiting = !name.defined; records.push_back(record);
+        }
+        for (Symbol ref : section.extRefs) records.push_back({{"R", ref.name, "", "", ""}, ref.row});
+        for (CodeLine line : section.code) {
+            ModuleRecord record = {{"T", "", hexAddress(line.address), hexLength(line.size), line.code}, line.row};
+            record.reserve = line.reserve; record.waiting = line.waiting; record.unresolved = line.unresolved; records.push_back(record);
+        }
+        for (Relocation relocation : section.relocations)
+            records.push_back({{"M", relocation.name, hexAddress(relocation.address), "", ""}, relocation.row});
+        records.push_back({{"E", "", hexAddress(section.entry), "", ""}, section.endRow});
     }
-    if (a.ended) records.push_back({{"E", "", hexAddress(a.entry), "", ""}, a.endRow});
     return records;
 }
 

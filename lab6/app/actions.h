@@ -77,9 +77,12 @@ void showErrorRow(vector<Error> errors, int index) {
 
 Table symbolsTable() {
     Table table;
-    for (Symbol symbol : assembly.symbols) {
-        string external = findSymbol(assembly.extDefs, symbol.name) != -1 ? "1" : "0";
-        table.push_back({symbol.name, symbol.defined ? hexAddress(symbol.address) : "", external, addressList(symbol.waiting)});
+    for (Symbol symbol : visibleSymbols(assembly)) {
+        bool external = false;
+        for (ModuleSection section : assembly.sections)
+            if (sameName(section.name, symbol.section) && findSymbol(section.extDefs, symbol.name) != -1) external = true;
+        if (sameName(assembly.programName, symbol.section) && findSymbol(assembly.extDefs, symbol.name) != -1) external = true;
+        table.push_back({symbol.section, symbol.name, symbol.defined ? hexAddress(symbol.address) : "", external ? "1" : "0", addressList(symbol.waiting)});
     }
     return table;
 }
@@ -119,10 +122,10 @@ void showAssembly() {
     errorsGrid.placeholder = "Ошибок нет";
     errorsGrid.setRows(errorsTable(assembly.errors));
     markBadRows(assembly.errors);
-    if (assembly.ended)
-        headerGrid.setRows({{assembly.programName, hexAddress(assembly.length), hexAddress(assembly.start)}});
-    else
-        headerGrid.clear();
+    Table headers;
+    for (ModuleSection section : assembly.sections) headers.push_back({section.name, hexAddress(section.length), "000000"});
+    if (!assembly.ended && assembly.startRow >= 0) headers.push_back({assembly.programName, hexAddress(assembly.counter - assembly.start), "000000"});
+    headerGrid.setRows(headers);
 
     EnableWindow(stepButton, !assembly.finished);
     EnableWindow(runButton, !assembly.finished);

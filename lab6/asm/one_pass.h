@@ -183,6 +183,63 @@ void parseStart(Assembly& a, int row, string label, string op1, string op2) {
     a.done = "Start: программа «" + label + "», счётчик адреса = " + hexAddress(a.start);
 }
 
+void checkUndefined(Assembly& a);
+void checkExternalNames(Assembly& a);
+
+void closeSection(Assembly& a, int row) {
+    a.length = a.counter - a.start;
+    checkUndefined(a);
+    checkExternalNames(a);
+    ModuleSection section;
+    section.name = a.programName;
+    section.length = a.length;
+    section.entry = a.entry;
+    section.startRow = a.startRow;
+    section.endRow = row;
+    section.code = a.code;
+    section.symbols = a.symbols;
+    section.extDefs = a.extDefs;
+    section.extRefs = a.extRefs;
+    section.relocations = a.relocations;
+    for (Symbol& symbol : section.symbols) symbol.section = section.name;
+    a.sections.push_back(section);
+}
+
+void startControlSection(Assembly& a, int row, string name) {
+    if (name == "") {
+        addError(a, row, "У CSECT нет метки - она задаёт имя новой секции");
+        return;
+    }
+    if (!isName(name) || len(name) > MAX_NAME_LENGTH || isReserved(name, a.ops)) {
+        addError(a, row, "Имя секции «" + name + "» должно быть допустимым именем и не совпадать с зарезервированным словом");
+        return;
+    }
+    for (ModuleSection section : a.sections)
+        if (sameName(section.name, name)) {
+            addError(a, row, "Имя секции «" + name + "» уже используется");
+            return;
+        }
+    if (sameName(a.programName, name)) {
+        addError(a, row, "Имя секции «" + name + "» уже используется");
+        return;
+    }
+    closeSection(a, row);
+    a.programName = name;
+    a.start = 0;
+    a.counter = 0;
+    a.length = 0;
+    a.entry = 0;
+    a.startRow = row;
+    a.endRow = -1;
+    a.code.clear();
+    a.symbols.clear();
+    a.relocations.clear();
+    a.extDefs.clear();
+    a.extRefs.clear();
+    a.codeStarted = false;
+    a.done = "CSECT: начата секция «" + name + "» со своей ТСИ и счётчиком адреса 000000";
+}
+
 void parseEnd(Assembly& a, int row, string op1, string op2) {
     a.entry = a.start;
     if (op2 != "") addError(a, row, "У End только один операнд - точка входа");
@@ -294,6 +351,7 @@ void defineLabel(Assembly& a, string label, int row) {
     symbol.defined = true;
     symbol.address = a.counter;
     symbol.row = row;
+    symbol.section = a.programName;
     symbol.external = findSymbol(a.extDefs, label) != -1;
     a.done = "Метка " + symbol.name + " = " + hexAddress(a.counter);
     if (symbol.external) a.done += " (внешнее имя)";
@@ -348,6 +406,7 @@ string useLabel(Assembly& a, CodeLine& out, Line line) {
         Symbol symbol;
         symbol.name = line.label;
         symbol.row = line.row;
+        symbol.section = a.programName;
         a.symbols.push_back(symbol);
         i = len(a.symbols) - 1;
     }
@@ -390,10 +449,18 @@ void processRow(Assembly& a, int row) {
         parseEnd(a, row, op1, op2);
         a.endRow = row;
         a.ended = true;
-        a.length = a.counter - a.start;
-        checkUndefined(a);
-        checkExternalNames(a);
+        closeSection(a, row);
         a.done = "End: длина программы " + hexAddress(a.length) + ", точка входа " + hexAddress(a.entry);
+        return;
+    }
+
+    if (mnemonic == "CSECT") {
+        if (label == "") {
+            addError(a, row, "У CSECT нет метки - она задаёт имя новой секции");
+            return;
+        }
+        parseEnd(a, row, op1, op2);
+        startControlSection(a, row, label);
         return;
     }
 
@@ -465,9 +532,7 @@ void finishAssembly(Assembly& a) {
     if (!a.started) a.errors.push_back({"program", -1, "Исходный текст пуст - нечего ассемблировать"});
     if (a.started && !a.ended) {
         if (!a.stopped) a.errors.push_back({"program", -1, "Нет директивы End в конце программы"});
-        a.length = a.counter - a.start;
-        checkUndefined(a);
-        checkExternalNames(a);
+        closeSection(a, a.nextRow);
     }
     a.finished = true;
     a.ok = len(a.errors) == 0;

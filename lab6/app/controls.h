@@ -22,8 +22,8 @@ void createGrids() {
     opsGrid.name = "Таблица кодов операций";
     opsGrid.create(mainWindow, ID_OPS, fonts.normal);
 
-    symbolsGrid.headers = {"Метка", "Адрес", "Внешнее", "Команды, ждущие адрес"};
-    symbolsGrid.widths = {24, 20, 16, 40};
+    symbolsGrid.headers = {"Секция", "Метка", "Адрес", "Внешнее", "Команды, ждущие адрес"};
+    symbolsGrid.widths = {18, 20, 18, 14, 30};
     symbolsGrid.showTooltips = true;
     symbolsGrid.fitText = true;
     symbolsGrid.placeholder = "Появится после первого шага";

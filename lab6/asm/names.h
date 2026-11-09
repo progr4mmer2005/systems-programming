@@ -35,7 +35,7 @@ bool isRegister(string s) { return registerNumber(s) != -1; }
 
 bool isDirective(string s) {
     s = upper(s);
-    return s == "START" || s == "END" || s == "WORD" || s == "BYTE" || s == "RESB" || s == "RESW" || s == "EXTDEF" ||
+    return s == "START" || s == "END" || s == "CSECT" || s == "WORD" || s == "BYTE" || s == "RESB" || s == "RESW" || s == "EXTDEF" ||
            s == "EXTNAME" || s == "EXTREF";
 }
 

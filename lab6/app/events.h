@@ -10,8 +10,8 @@ void onGridChanged(int gridId) {
 int sourceRowOf(int gridId, int row) {
     if (row < 0) return -1;
     if (gridId == ID_SOURCE) return row;
-    if (gridId == ID_SYMBOLS && row < len(assembly.symbols)) return assembly.symbols[row].row;
-    if (gridId == ID_HEADER && row == 0) return assembly.startRow;
+    if (gridId == ID_SYMBOLS) { vector<Symbol> symbols = visibleSymbols(assembly); if (row < len(symbols)) return symbols[row].row; }
+    if (gridId == ID_HEADER) { if (row < len(assembly.sections)) return assembly.sections[row].startRow; if (row == len(assembly.sections)) return assembly.startRow; }
     if (gridId == ID_RELOC && row < len(assembly.relocations)) return assembly.relocations[row].row;
     if (gridId == ID_EXTNAMES) {
         vector<Symbol> names = externalNames(assembly);
@@ -69,7 +69,8 @@ CellColors cellColors(int gridId, int row, int col) {
         result.text = col == 0 ? colors.muted : colors.error;
     }
 
-    if (gridId == ID_SYMBOLS && row < len(assembly.symbols) && !assembly.symbols[row].defined) {
+    vector<Symbol> symbols = visibleSymbols(assembly);
+    if (gridId == ID_SYMBOLS && row < len(symbols) && !symbols[row].defined) {
         result.hasText = true;
         result.text = colors.muted;
     }
